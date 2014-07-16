@@ -62,16 +62,16 @@ $ make
 
 例示
 --------
-* エイリアス名eggで認証する
+* エイリアス名eggで認証する<br>
 ctw -u egg -a
 
-* エイリアス名eggで投稿
+* エイリアス名eggで投稿<br>
 ctw -u egg -p "i am egg"
 
-* エイリアス名eggのHomeタイムラインを見る
+* エイリアス名eggのHomeタイムラインを見る<br>
 ctw -u egg -r
 
-* ｢github｣という投稿があるかどうか検索する
+* ｢github｣という投稿があるかどうか検索する<br>
 ctw -s github
 
 
@@ -97,6 +97,6 @@ TODO
 
 謝辞
 ===============
-* picojsonのkazuho氏 (https://github.com/kazuho/picojson)
+* picojsonのkazuho氏 (https://github.com/kazuho/picojson)<br>
 JSONの解析に使用しています。picojsonはSTLの親和性高くて便利です
 
