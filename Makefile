@@ -2,7 +2,7 @@
 CC        = $(CROSS_COMPILE)g++
 STRIP     = $(CROSS_COMPILE)strip
 
-CFLAGS    = -Wall
+CFLAGS    = -Wall -O2
 LDFLAGS   = -lcurl
 
 TARGET    = ctw
@@ -23,6 +23,7 @@ keys/apikeys.hpp:
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(DEBUGS) -o $@ $(OBJS) $(ARLIBS) $(LDFLAGS)
+	$(STRIP) $@
 
 httplib:
 	-@ cd http;	make 

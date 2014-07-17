@@ -290,9 +290,8 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "-p | --post status   タイムラインへ投稿\n"
 	 "-s | --search word   ワードで検索\n"
 	 "-r | --readhome      ホームのタイムラインを読む\n"
-	 "-t | --readuser      指定ユーザのタイムラインを読む\n"
-	 "                     -n オプションでユーザ名指定すること\n"
-	 "                     省略時は自身の発言を読む\n"
+	 "                     -n オプションでユーザ名指定すると指定ユーザを読む\n"
+	 "                     -n オプションで\"\"と指定すると自分の発言を読む\n"
 	 "-n | --screen        指定が必要な場合のユーザスクリーンネーム\n"
 	 "-u | --user alies    エイリアス名指定:省略可(-a とも併用可能)\n"
 	 "-v | --verbose       (デバッグ用)余計な文字を出力しまくる\n"
@@ -314,7 +313,7 @@ static void usage(FILE *fp, int argc, char **argv)
 );
 }
 
-static const char short_options[] = "hap:rs:u:vtn:";
+static const char short_options[] = "hap:rtn:s:u:v";
 
 static const struct option
 long_options[] = {
@@ -322,7 +321,6 @@ long_options[] = {
 	{ "auth",		no_argument,		NULL, 'a' },
 	{ "post",		required_argument,	NULL, 'p' },
 	{ "readhome",	no_argument,		NULL, 'r' },
-	{ "readuser",	no_argument,		NULL, 't' },
 	{ "screen",		required_argument,	NULL, 'n' },
 	{ "search",		required_argument,	NULL, 's' },
 	{ "user",		required_argument,	NULL, 'u' },
@@ -338,7 +336,7 @@ int main(int argc,char *argv[])
 	bool doPostTL=false;
 	bool doSearchTL = false;
 	bool doAuth = false;
-	bool doUserTL = false;
+	bool setScerrnName = false;
 	string status,aries,screenuser;
 
 	do_Verbose = false;
@@ -373,14 +371,12 @@ int main(int argc,char *argv[])
 		case 'r':
 			doReadTL = true;
 	        break;
-		case 't':
-			doUserTL = true;
-	        break;
 		case 's':
 			status = optarg;
 			doSearchTL = true;
 	        break;
 		case 'n':
+			setScerrnName = true;
 			screenuser = optarg;
 	        break;
 		case 'u':
@@ -410,8 +406,13 @@ int main(int argc,char *argv[])
 	initUserInfo(client);
 	
 	if(doPostTL)	PostTimeline(client,status);
-	if(doReadTL)	ReadHomeTimeline(client);
-	if(doUserTL)	ReadUserTimeline(client,screenuser);
+	if(doReadTL){
+		if((!setScerrnName) && (screenuser.empty())){
+			ReadHomeTimeline(client);
+		}else{
+			ReadUserTimeline(client,screenuser);
+		}
+	}
 	if(doSearchTL)	SearchTimeline(client,status);
 
 	return 0;

@@ -4,7 +4,7 @@ STRIP     = $(CROSS_COMPILE)strip
 AR        = $(CROSS_COMPILE)ar
 RANLIB    = $(CROSS_COMPILE)ranlib
 
-CFLAGS    = -Wall
+CFLAGS    = -Wall -O2
 LDFLAGS   =  
 
 TARGET    = hashlib.a
