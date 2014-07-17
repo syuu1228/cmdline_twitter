@@ -28,6 +28,7 @@
 #include <boost/format.hpp>
 
 using namespace std;
+using namespace TwitterRest1_1;
 
 TwitterClient::TwitterClient()
 {}
@@ -66,7 +67,7 @@ bool TwitterClient::Authentication_GetURL(std::string &rurl)
 	// まずはTemporaryCredentialsをする
 	if(! m_auth.TemporaryCredentials(
 		&m_peer,
-		TwitterRest1_1::OAUTH1_REQUEST_TOKEN,
+		OAUTH1_REQUEST_TOKEN,
 		callbk)
 	){
 		vprint("err TemporaryCredentials");
@@ -74,7 +75,7 @@ bool TwitterClient::Authentication_GetURL(std::string &rurl)
 	}
 	// Resource Owner AuthorizatioのためのURLを生成する
 	// あらかじめブラウザからログインして承認してもらう必要があるため
-	m_auth.MakeResourceOwnerHttpData(TwitterRest1_1::OAUTH1_AUTHORIZE,rurl);
+	m_auth.MakeResourceOwnerHttpData(OAUTH1_AUTHORIZE,rurl);
 	return true;
 
 }
@@ -88,15 +89,15 @@ bool TwitterClient::Authentication_Finish(const std::string &pin)
 	m_auth.setVerifier(pin);
 	if(! m_auth.TokenCredentials(
 		&m_peer,
-		TwitterRest1_1::OAUTH1_ACCESS_TOKEN,
+		OAUTH1_ACCESS_TOKEN,
 		twitter_res)
 	){
 		vprint("err TokenCredentials");
 		return false;
 	}
 	// 認証OKだったのでスクリーンネームとUSERID取得
-	m_user_name = twitter_res[TwitterRest1_1::OAUTH_ANSWER_SCREENNAME];
-	m_user_id   = twitter_res[TwitterRest1_1::OAUTH_ANSWER_USERID];
+	m_user_screen	= twitter_res[OAUTH_ANSWER_SCREENNAME];
+	m_user_id		= twitter_res[OAUTH_ANSWER_USERID];
 	return true;
 }
 
@@ -171,31 +172,88 @@ bool TwitterClient::postRequest(const std::string url,HTTPRequestData &hdata,pic
 	return true;
 }
 
+
+
+
+bool TwitterClient::getUserTimeline(
+	const std::string &userid,const std::string &screenname,
+	uint16_t count,
+	const std::string &since_id,const std::string &max_id,
+	bool include_rts,bool include_replies,
+	picojson::array &rtimeline)
+{
+	HTTPRequestData	httpdata;
+	string ans;
+	string val;
+	picojson::value jsonval;
+	
+	if(! userid.empty()){
+		httpdata[PARAM_USER_ID] = userid;
+	}else if(! screenname.empty()){
+		httpdata[PARAM_SCREEN_NAME] = screenname;
+	}else{
+		// どっちかのパラメータをいれること
+		return false;
+	}
+	
+	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
+	httpdata[PARAM_INCLUDE_RTS]	= (include_rts		? VALUE_TRUE : VALUE_FALSE);
+	httpdata[PARAM_EXC_REPLIES]	= (include_replies	? VALUE_FALSE : VALUE_TRUE);
+	
+	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
+	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
+	
+	
+	if(! getRequest(
+		TL_RESOURCE_STATUSES_USERTL,
+		httpdata,
+		jsonval)
+	){
+		vprint("err getRequest");
+		return false;
+	}
+	// タイムライン取得は配列である
+	rtimeline = jsonval.get<picojson::array>();
+	return true;
+}
+
+// 自分自身の発言をGET
+bool TwitterClient::getMyTimeline(
+	uint16_t count,
+	const std::string &since_id,const std::string &max_id,
+	bool include_rts,bool include_replies,
+	picojson::array &rtimeline)
+{
+	return getUserTimeline(
+		getMyUserID(),"",
+		count,
+		since_id,max_id,
+		include_rts,include_replies,
+		rtimeline
+	);
+}
+
+
 // タイムラインの取得
 bool TwitterClient::getHomeTimeline(uint16_t count,
 	const std::string &since_id,const std::string &max_id,
 	bool include_rts,bool include_replies,
 	picojson::array &rtimeline)
 {
-	if(count > 200)	return false;
-	if(count == 0){
-		count = 20;		// default value 
-	}
-	
 	HTTPRequestData	httpdata;
 	string ans;
 	string val;
 	picojson::value jsonval;
-	httpdata["count"] = (boost::format("%d") % count).str();
-	httpdata["include_rts"]		= (include_rts ? "true" : "false");
-	httpdata["exclude_replies"] = (include_replies? "false" : "true");
+	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
+	httpdata[PARAM_INCLUDE_RTS]	= (include_rts		? VALUE_TRUE : VALUE_FALSE);
+	httpdata[PARAM_EXC_REPLIES]	= (include_replies	? VALUE_FALSE : VALUE_TRUE);
 	
-	if(! since_id.empty())	httpdata["since_id"]	= since_id;
-	if(! max_id.empty())	httpdata["max_id"]		= max_id;
+	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
+	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
 	
 	
 	if(! getRequest(
-		TwitterRest1_1::TL_RESOURCE_STATUSES_HOMETL,
+		TL_RESOURCE_STATUSES_HOMETL,
 		httpdata,
 		jsonval)
 	){
@@ -218,7 +276,7 @@ bool TwitterClient::postStatus(const std::string status)
 	httpdata["status"] = status;
 	
 	if(! postRequest(
-		TwitterRest1_1::TW_RESOURCE_STATUSES_UPDATE,
+		TW_RESOURCE_STATUSES_UPDATE,
 		httpdata,
 		jsonval)
 	){
@@ -237,16 +295,16 @@ bool TwitterClient::searchTweets(const std::string &q,const std::string &lang,co
 	string val;
 	picojson::value jsonval;
 	
-	httpdata["count"] 		= "100";
+	httpdata[PARAM_COUNT] 	= "100";
 	httpdata["q"]			= q;
 	httpdata["lang"]		= lang;
 	httpdata["result_type"]	= restype;
 	
-	if(! since_id.empty())	httpdata["since_id"]	= since_id;
-	if(! max_id.empty())	httpdata["max_id"]		= max_id;
+	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
+	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
 	
 	if(! getRequest(
-		TwitterRest1_1::TW_SEARCH_TWEETS,
+		TW_SEARCH_TWEETS,
 		httpdata,
 		jsonval)
 	){
@@ -257,6 +315,36 @@ bool TwitterClient::searchTweets(const std::string &q,const std::string &lang,co
 	rtimeline = jsonval.get<picojson::object>()["statuses"].get<picojson::array>();
 	return true;
 }
+
+// 自分のユーザ情報の取得
+// last_status : 最後の発言などを含める
+// entities : ProfileのURL情報などを含める(効いてない？？)
+bool TwitterClient::verifyAccount(picojson::object &userinfo,bool last_status,bool entities)
+{
+	HTTPRequestData	httpdata;
+	string ans;
+	string val;
+	picojson::value jsonval;
+
+	httpdata["include_entities"]	= (entities ? VALUE_TRUE : VALUE_FALSE);
+	httpdata["skip_status"] 		= (last_status ? VALUE_FALSE : VALUE_TRUE);
+	
+	if(! getRequest(
+		TW_USERS_ACCOUNT_VERIFY,
+		httpdata,
+		jsonval)
+	){
+		vprint("err getRequest");
+		return false;
+	}
+	userinfo = jsonval.get<picojson::object>();
+	
+	m_user_id		= userinfo[PARAM_ID_STR].to_str();
+	m_user_name		= userinfo[PARAM_NAME].to_str();
+	m_user_screen	= userinfo[PARAM_SCREEN_NAME].to_str();
+	return true;
+}
+
 
 
 

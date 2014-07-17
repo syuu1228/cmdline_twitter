@@ -191,6 +191,17 @@ static void printTimeline(picojson::array &timeline)
 
 
 
+// ユーザ情報の初期化
+bool initUserInfo(TwitterClient &client)
+{
+	picojson::object info;
+	// ただユーザ名とスクリーンネームとIDが知りたいだけ
+	if(! client.verifyAccount(info)){
+		return false;
+	}
+	return true;
+}
+
 // タイムラインを読む
 void ReadHomeTimeline(TwitterClient &client)
 {
@@ -207,6 +218,40 @@ void ReadHomeTimeline(TwitterClient &client)
 	}
 	printTimeline(timeline);
 }
+
+// 指定ユーザのタイムラインを読む
+void ReadUserTimeline(TwitterClient &client,const std::string &name)
+{
+	picojson::array timeline;
+	
+	if(name.empty()){
+		if(! client.getMyTimeline(
+			200,
+			"",
+			"",
+			true,			// RT含める
+			true,			// @含める
+			timeline)
+		){
+			return;
+		}
+	}else{
+		if(! client.getUserTimeline(
+			"",
+			name,
+			200,
+			"",
+			"",
+			true,			// RT含める
+			true,			// @含める
+			timeline)
+		){
+			return;
+		}
+	}
+	printTimeline(timeline);
+}
+
 
 // 投稿する
 void PostTimeline(TwitterClient &client,const std::string &status)
@@ -245,6 +290,10 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "-p | --post status   タイムラインへ投稿\n"
 	 "-s | --search word   ワードで検索\n"
 	 "-r | --readhome      ホームのタイムラインを読む\n"
+	 "-t | --readuser      指定ユーザのタイムラインを読む\n"
+	 "                     -n オプションでユーザ名指定すること\n"
+	 "                     省略時は自身の発言を読む\n"
+	 "-n | --screen        指定が必要な場合のユーザスクリーンネーム\n"
 	 "-u | --user alies    エイリアス名指定:省略可(-a とも併用可能)\n"
 	 "-v | --verbose       (デバッグ用)余計な文字を出力しまくる\n"
 	 "\n"
@@ -265,7 +314,7 @@ static void usage(FILE *fp, int argc, char **argv)
 );
 }
 
-static const char short_options[] = "hap:rs:u:v";
+static const char short_options[] = "hap:rs:u:vtn:";
 
 static const struct option
 long_options[] = {
@@ -273,6 +322,8 @@ long_options[] = {
 	{ "auth",		no_argument,		NULL, 'a' },
 	{ "post",		required_argument,	NULL, 'p' },
 	{ "readhome",	no_argument,		NULL, 'r' },
+	{ "readuser",	no_argument,		NULL, 't' },
+	{ "screen",		required_argument,	NULL, 'n' },
 	{ "search",		required_argument,	NULL, 's' },
 	{ "user",		required_argument,	NULL, 'u' },
 	{ "verbose",	no_argument,		NULL, 'v' },
@@ -287,7 +338,8 @@ int main(int argc,char *argv[])
 	bool doPostTL=false;
 	bool doSearchTL = false;
 	bool doAuth = false;
-	string status,aries;
+	bool doUserTL = false;
+	string status,aries,screenuser;
 
 	do_Verbose = false;
 	if(argc == 1){
@@ -321,9 +373,15 @@ int main(int argc,char *argv[])
 		case 'r':
 			doReadTL = true;
 	        break;
+		case 't':
+			doUserTL = true;
+	        break;
 		case 's':
 			status = optarg;
 			doSearchTL = true;
+	        break;
+		case 'n':
+			screenuser = optarg;
 	        break;
 		case 'u':
 			aries = optarg;
@@ -348,16 +406,14 @@ int main(int argc,char *argv[])
 	if(! readAccessKey(client,aries)){
 		return -1;
 	}
+	// とりあえず自分自身の情報を取得
+	initUserInfo(client);
 	
-	if(doPostTL){
-		PostTimeline(client,status);
-	}
-	if(doReadTL){
-		ReadHomeTimeline(client);
-	}
-	if(doSearchTL){
-		SearchTimeline(client,status);
-	}
+	if(doPostTL)	PostTimeline(client,status);
+	if(doReadTL)	ReadHomeTimeline(client);
+	if(doUserTL)	ReadUserTimeline(client,screenuser);
+	if(doSearchTL)	SearchTimeline(client,status);
+
 	return 0;
 }
 

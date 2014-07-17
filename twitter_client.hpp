@@ -54,6 +54,8 @@ namespace TwitterRest1_1
 	// Search
 	static const std::string	TW_SEARCH_TWEETS				= "https://api.twitter.com/1.1/search/tweets.json";
 	
+	// Users
+	static const std::string	TW_USERS_ACCOUNT_VERIFY			= "https://api.twitter.com/1.1/account/verify_credentials.json";
 	
 	// Help
 	static const std::string	TW_HELP_CONFIGURATION			= "https://api.twitter.com/1.1/help/configuration.json";
@@ -68,6 +70,23 @@ namespace TwitterRest1_1
 	static const std::string	SEARCH_RESTYPE_RECENT			= "recent";
 	static const std::string	SEARCH_RESTYPE_POPULAR			= "popular";
 	
+	// often PARAM and VALUE
+	static const std::string	PARAM_COUNT						= "count";
+	static const std::string	PARAM_SINCE_ID					= "since_id";
+	static const std::string	PARAM_MAX_ID					= "max_id";
+	static const std::string	PARAM_INCLUDE_RTS				= "include_rts";
+	static const std::string	PARAM_EXC_REPLIES				= "exclude_replies";
+	static const std::string	PARAM_USER_ID					= "user_id";
+	
+	
+	static const std::string	VALUE_TRUE						= "true";
+	static const std::string	VALUE_FALSE						= "false";
+	
+	static const std::string	PARAM_ID						= "id";
+	static const std::string	PARAM_ID_STR					= "id_str";
+	static const std::string	PARAM_NAME						= "name";
+	static const std::string	PARAM_SCREEN_NAME				= "screen_name";
+	
 	
 }; // namespace TwitterRest1_1
 
@@ -81,8 +100,9 @@ protected:
 	OAuth		m_auth;
 	bool		m_verbose;
 	
-	std::string	m_user_name;
-	std::string	m_user_id;
+	std::string	m_user_name;				// ユーザ名
+	std::string	m_user_screen;				// スクリーン名(@でついているあれ)
+	std::string	m_user_id;					// ユーザID
 	
 	
 	bool getRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval);
@@ -94,17 +114,29 @@ public:
 
 	void setComsumerPair(const std::string &key,const std::string &sec);
 	void setUserAccessPair(const std::string &key,const std::string &sec);
-	
 	void getUserAccessPair(std::string &key,std::string &sec);
 
-
+	// OAuth
 	bool Authentication_GetURL(std::string &rurl);
 	bool Authentication_Finish(const std::string &pin);
+	
+	// statuses
+	bool getUserTimeline(const std::string &userid,const std::string &screenname,
+						uint16_t count,
+						const std::string &since_id,const std::string &max_id,
+						bool include_rts,bool include_replies,
+						picojson::array &rtimeline);
+	
+	bool getMyTimeline(uint16_t count,
+						const std::string &since_id,const std::string &max_id,
+						bool include_rts,bool include_replies,
+						picojson::array &rtimeline);
 	
 	bool getHomeTimeline(uint16_t count,
 						const std::string &since_id,const std::string &max_id,
 						bool include_rts,bool include_replies,
 						picojson::array &rtimeline);
+	
 	
 	bool postStatus(const std::string status);
 	
@@ -112,11 +144,15 @@ public:
 	bool searchTweets(const std::string &q,const std::string &lang,const std::string &restype,
 		const std::string & since_id,const std::string & max_id,picojson::array &rtimeline);
 	
+	bool verifyAccount(picojson::object &userinfo,bool last_status=false,bool entities=false);
+	
+	
 	inline void copyAuth(TwitterClient &rhs){
 		m_auth			= rhs.m_auth;
 	};
 
 	inline std::string getMyUserName()					{return  m_user_name;}
+	inline std::string getMyUserScreenName()			{return  m_user_screen;}
 	inline std::string getMyUserID()					{return  m_user_id;}
 	
 	inline void serVerbose(bool set)					{m_verbose = set;}
