@@ -304,10 +304,14 @@ void PostTimeline(TwitterClient &client,const std::string &status)
 	client.postStatus(status);
 }
 
-
 void RetweetTimeline(TwitterClient &client,const std::string &idstr)
 {
 	client.retweetStatus(idstr);
+}
+
+void FavoriteTimeline(TwitterClient &client,const std::string &idstr)
+{
+	client.createFavorites(idstr);
 }
 
 
@@ -348,6 +352,7 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "                     -n オプションで\"@\"と指定すると自分へのメンションを読む\n"
 	 "     --del           発言の削除 -iでID指定\n"
 	 "-R | --Retweet       リツイートする -iでID指定\n"
+	 "-F | --Fav           お気に入りに追加する -iでID指定\n"
 	 "-n | --name          指定が必要な場合のユーザスクリーンネーム\n"
 	 "-i | --id            指定が必要な場合の発言ID\n"
 	 "-u | --user alies    エイリアス名指定:省略可(-a とも併用可能)\n"
@@ -376,6 +381,7 @@ namespace CMDLINE_OPT
 		PUT_HELP	= 1,
 		AUTH,
 		DELTW,
+		FAVORITES,
 		POST,
 		READTL,
 		RETWEET,
@@ -389,17 +395,18 @@ namespace CMDLINE_OPT
 
 static const struct option
 long_options[] = {
-	{ "auth",		no_argument,		NULL, CMDLINE_OPT::AUTH		},
-	{ "del",		no_argument,		NULL, CMDLINE_OPT::DELTW	},
-	{ "help",		no_argument,		NULL, CMDLINE_OPT::PUT_HELP	},
-	{ "id",			required_argument,	NULL, CMDLINE_OPT::ID		},
-	{ "name",		required_argument,	NULL, CMDLINE_OPT::SCREEN	},
-	{ "post",		required_argument,	NULL, CMDLINE_OPT::POST		},
-	{ "readtl",		no_argument,		NULL, CMDLINE_OPT::READTL	},
-	{ "Retweet",	no_argument,		NULL, CMDLINE_OPT::RETWEET	},
-	{ "search",		required_argument,	NULL, CMDLINE_OPT::SEARCH	},
-	{ "user",		required_argument,	NULL, CMDLINE_OPT::USER		},
-	{ "verbose",	no_argument,		NULL, CMDLINE_OPT::VERBOSE	},
+	{ "auth",		no_argument,		NULL, CMDLINE_OPT::AUTH			},
+	{ "del",		no_argument,		NULL, CMDLINE_OPT::DELTW		},
+	{ "Fav",		no_argument,		NULL, CMDLINE_OPT::FAVORITES	},
+	{ "help",		no_argument,		NULL, CMDLINE_OPT::PUT_HELP		},
+	{ "id",			required_argument,	NULL, CMDLINE_OPT::ID			},
+	{ "name",		required_argument,	NULL, CMDLINE_OPT::SCREEN		},
+	{ "post",		required_argument,	NULL, CMDLINE_OPT::POST			},
+	{ "readtl",		no_argument,		NULL, CMDLINE_OPT::READTL		},
+	{ "Retweet",	no_argument,		NULL, CMDLINE_OPT::RETWEET		},
+	{ "search",		required_argument,	NULL, CMDLINE_OPT::SEARCH		},
+	{ "user",		required_argument,	NULL, CMDLINE_OPT::USER			},
+	{ "verbose",	no_argument,		NULL, CMDLINE_OPT::VERBOSE		},
 	{ 0, 0, 0, 0 }
 };
 
@@ -409,6 +416,7 @@ int main(int argc,char *argv[])
 
 	bool doReadTL=false;
 	bool doRetweetTL=false;
+	bool doFavTL=false;
 	bool doPostTL=false;
 	bool doSearchTL = false;
 	bool doAuth = false;
@@ -455,6 +463,10 @@ int main(int argc,char *argv[])
 
 		case CMDLINE_OPT::RETWEET:
 			doRetweetTL = true;
+	        break;
+			
+		case CMDLINE_OPT::FAVORITES:
+			doFavTL = true;
 	        break;
 			
 		case CMDLINE_OPT::SEARCH:
@@ -519,6 +531,18 @@ int main(int argc,char *argv[])
 		}
 		RetweetTimeline(client,idstr);
 	}
+	
+	if(doFavTL){
+		if(idstr.empty()){
+			// IDが指定されていない場合はとりあえず表示
+			ReadHomeTimeline(client);
+			// IDを指定させる
+			cout << "発言をお気に入りに入れたいIDを指定してください" << endl;
+			cin >> idstr;
+		}
+		FavoriteTimeline(client,idstr);
+	}
+	
 	
 	if(doReadTL){
 		if((!setScerrnName) && (screenuser.empty())){

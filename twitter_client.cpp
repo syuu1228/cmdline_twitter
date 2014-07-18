@@ -389,6 +389,28 @@ bool TwitterClient::searchTweets(const std::string &q,const std::string &lang,co
 	return true;
 }
 
+
+// お気に入りに追加する
+bool TwitterClient::createFavorites(const std::string &idstr)
+{
+	HTTPRequestData	httpdata;
+	picojson::value jsonval;
+
+	httpdata[PARAM_ID]	= idstr;
+	
+	if(! postRequest(
+		TW_FABORITES_CREATE,
+		httpdata,
+		jsonval)
+	){
+		vprint("err DestroyStatus");
+		return false;
+	}
+	return true;
+}
+
+
+
 // 自分のユーザ情報の取得
 // last_status : 最後の発言などを含める
 // entities : ProfileのURL情報などを含める(効いてない？？)

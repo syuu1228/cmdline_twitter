@@ -57,6 +57,9 @@ namespace TwitterRest1_1
 	// Users
 	static const std::string	TW_USERS_ACCOUNT_VERIFY			= "https://api.twitter.com/1.1/account/verify_credentials.json";
 	
+	// Favorites
+	static const std::string	TW_FABORITES_CREATE				= "https://api.twitter.com/1.1/favorites/create.json";
+	
 	// Help
 	static const std::string	TW_HELP_CONFIGURATION			= "https://api.twitter.com/1.1/help/configuration.json";
 	static const std::string	TW_HELP_RATE_LIMIT				= "https://api.twitter.com/1.1/application/rate_limit_status.json";
@@ -122,7 +125,6 @@ public:
 	bool Authentication_Finish(const std::string &pin);
 	
 	// statuses
-	
 	bool getMentionsTimeline(uint16_t count,
 							const std::string &since_id,const std::string &max_id,
 							picojson::array &rtimeline);
@@ -148,10 +150,14 @@ public:
 	bool postStatus(const std::string &status);
 	bool retweetStatus(const std::string &idstr);
 	
+	// Search
 	bool searchTweets(const std::string &q,const std::string &lang,const std::string &restype,
 		const std::string & since_id,const std::string & max_id,picojson::array &rtimeline);
 	
 	bool verifyAccount(picojson::object &userinfo,bool last_status=false,bool entities=false);
+	
+	// Favorites
+	bool createFavorites(const std::string &idstr);
 	
 	
 	inline void copyAuth(TwitterClient &rhs){
