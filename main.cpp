@@ -44,7 +44,7 @@
 using namespace std;
 
 // バージョン
-static const string THIS_VERSION	= "0.0.1";
+static const string THIS_VERSION	= "0.0.2";
 
 // 設定ファイル保存先
 static const string	DEFAULT_AUTH_FILE = ".authkey_";
@@ -70,6 +70,20 @@ static bool get_app_dir(string &dirname)
 	return true;
 
 }
+
+
+inline void ReplaceString(std::string &src,const std::string &from,const std::string &to)
+{
+	string::size_type p;
+	p = src.find(from);
+	while(p != string::npos){
+		src.replace(p,from.length(),to);
+		p += to.length();
+		p = src.find(from, p);
+	}
+}
+
+
 
 // 一連の認証動作を行う
 void do_Authentication(TwitterClient &client,const string &aries)
@@ -175,7 +189,7 @@ static void printTimeline(picojson::array &timeline)
 	using namespace picojson;
 	using namespace std;
 	
-	string tmstr;
+	string tmstr,textstr;
 
 	// Twitterからの戻りは先が最新なので、逆順に表示
 	array::reverse_iterator it;
@@ -184,10 +198,15 @@ static void printTimeline(picojson::array &timeline)
 		object obj = it->get<object>();
 		object uobj = obj["user"].get<object>();	// 要素が中にある場合はこれ
 		get_local_time_string(obj["created_at"].to_str(),tmstr);
+		// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
+		textstr = obj["text"].to_str();
+		ReplaceString(textstr,"&lt;","<");
+		ReplaceString(textstr,"&gt;",">");
+		ReplaceString(textstr,"&amp;","&");
 		cout << "\033[32m";
 		cout << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() <<" " << tmstr << endl;
 		cout << "\033[37m";
-		cout << obj["text"].to_str() << endl;
+		cout << textstr << endl;
 	}
 	cout << "\033[0m";
 }
@@ -203,6 +222,22 @@ bool initUserInfo(TwitterClient &client)
 		return false;
 	}
 	return true;
+}
+
+
+// タイムラインを読む
+void ReadMemtioonTimeline(TwitterClient &client)
+{
+	picojson::array timeline;
+	if(! client.getMentionsTimeline(
+		200,
+		"",
+		"",
+		timeline)
+	){
+		return;
+	}
+	printTimeline(timeline);
 }
 
 // タイムラインを読む
@@ -293,10 +328,11 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "                     -u オプションでエイリアスを指定できます\n"
 	 "-p | --post status   タイムラインへ投稿\n"
 	 "-s | --search word   ワードで検索\n"
-	 "-r | --readhome      ホームのタイムラインを読む\n"
+	 "-r | --readtl        ホームのタイムラインを読む\n"
 	 "                     -n オプションでユーザ名指定すると指定ユーザを読む\n"
 	 "                     -n オプションで\"\"と指定すると自分の発言を読む\n"
-	 "-n | --screen        指定が必要な場合のユーザスクリーンネーム\n"
+	 "                     -n オプションで\"@\"と指定すると自分へのメンションを読む\n"
+	 "-n | --name          指定が必要な場合のユーザスクリーンネーム\n"
 	 "-u | --user alies    エイリアス名指定:省略可(-a とも併用可能)\n"
 	 "-v | --verbose       (デバッグ用)余計な文字を出力しまくる\n"
 	 "\n"
@@ -317,18 +353,30 @@ static void usage(FILE *fp, int argc, char **argv)
 	);
 }
 
-static const char short_options[] = "hap:rtn:s:u:v";
+namespace CMDLINE_OPT
+{
+	enum {
+		PUT_HELP	= 1,
+		AUTH,
+		POST,
+		READTL,
+		SCREEN,
+		SEARCH,
+		USER,
+		VERBOSE,
+	};
+};
 
 static const struct option
 long_options[] = {
-	{ "help",		no_argument,		NULL, 'h' },
-	{ "auth",		no_argument,		NULL, 'a' },
-	{ "post",		required_argument,	NULL, 'p' },
-	{ "readhome",	no_argument,		NULL, 'r' },
-	{ "screen",		required_argument,	NULL, 'n' },
-	{ "search",		required_argument,	NULL, 's' },
-	{ "user",		required_argument,	NULL, 'u' },
-	{ "verbose",	no_argument,		NULL, 'v' },
+	{ "auth",		no_argument,		NULL, CMDLINE_OPT::AUTH		},
+	{ "help",		no_argument,		NULL, CMDLINE_OPT::PUT_HELP	},
+	{ "name",		required_argument,	NULL, CMDLINE_OPT::SCREEN	},
+	{ "post",		required_argument,	NULL, CMDLINE_OPT::POST		},
+	{ "readtl",		no_argument,		NULL, CMDLINE_OPT::READTL	},
+	{ "search",		required_argument,	NULL, CMDLINE_OPT::SEARCH	},
+	{ "user",		required_argument,	NULL, CMDLINE_OPT::USER		},
+	{ "verbose",	no_argument,		NULL, CMDLINE_OPT::VERBOSE	},
 	{ 0, 0, 0, 0 }
 };
 
@@ -346,47 +394,51 @@ int main(int argc,char *argv[])
 	do_Verbose = false;
 	if(argc == 1){
 		usage(stderr, argc, argv);
-		return -1;
+		return 0;
 	}
 	tzset();
 	// このアプリのコンシューマキーなどを設定
 	client.setComsumerPair(AP_COMSUMER_KEY,AP_COMSUMER_SECRET);
 	
-	for (;;) {
-		int idx;
-		int c;
-
-		c = getopt_long(argc, argv,short_options, long_options, &idx);
-		if (c == -1)	break;
+	while(1){
+		int c = getopt_long_only(argc,argv,"",long_options,NULL);
+		
+		if(c == -1)		break;		// -1は解析終わり
 		switch (c) {
-		case 0: /* getopt_long() flag */
+		case 0:
 			break;
-
-		case 'h':
+		case CMDLINE_OPT::PUT_HELP:
 			usage(stdout, argc, argv);
 			return 0;
-		case 'a':
+			
+		case CMDLINE_OPT::AUTH:
 			doAuth = true;
 			break;
-		case 'p':
+			
+		case CMDLINE_OPT::POST:
 			status = optarg;
 			doPostTL = true;
 	        break;
-		case 'r':
+			
+		case CMDLINE_OPT::READTL:
 			doReadTL = true;
 	        break;
-		case 's':
+			
+		case CMDLINE_OPT::SEARCH:
 			status = optarg;
 			doSearchTL = true;
 	        break;
-		case 'n':
+			
+		case CMDLINE_OPT::SCREEN:
 			setScerrnName = true;
 			screenuser = optarg;
 	        break;
-		case 'u':
+			
+		case CMDLINE_OPT::USER:
 			aries = optarg;
 	        break;
-		case 'v':
+			
+		case CMDLINE_OPT::VERBOSE:
 			do_Verbose = true;
 	        break;
 			
@@ -413,6 +465,9 @@ int main(int argc,char *argv[])
 	if(doReadTL){
 		if((!setScerrnName) && (screenuser.empty())){
 			ReadHomeTimeline(client);
+		}else if(screenuser == "@"){
+			// 自分に対するメンション
+			ReadMemtioonTimeline(client);
 		}else{
 			ReadUserTimeline(client,screenuser);
 		}
