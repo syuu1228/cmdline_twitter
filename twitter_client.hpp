@@ -121,6 +121,11 @@ public:
 	bool Authentication_Finish(const std::string &pin);
 	
 	// statuses
+	
+	bool getMentionsTimeline(uint16_t count,
+							const std::string &since_id,const std::string &max_id,
+							picojson::array &rtimeline);
+	
 	bool getUserTimeline(const std::string &userid,const std::string &screenname,
 						uint16_t count,
 						const std::string &since_id,const std::string &max_id,

@@ -43,6 +43,9 @@
 
 using namespace std;
 
+// バージョン
+static const string THIS_VERSION	= "0.0.1";
+
 // 設定ファイル保存先
 static const string	DEFAULT_AUTH_FILE = ".authkey_";
 static const string	APP_DIR = ".ctw";
@@ -280,6 +283,7 @@ void SearchTimeline(TwitterClient &client,const std::string &ques)
 static void usage(FILE *fp, int argc, char **argv)
 {
 	fprintf(fp,
+	 "Command-line Twritter Version [%s]\n"
 	 "Usage: %s [options]\n"
 	 "初めて使用するときは -a オプションでこのアプリの認証を行ってください\n"
 	 "\n"
@@ -309,8 +313,8 @@ static void usage(FILE *fp, int argc, char **argv)
 	 " エイリアス egg として認証作業を行う:\n"
 	 "ctw -u egg -a\n"
 	 "",
-	  argv[0]
-);
+	 THIS_VERSION.c_str(),argv[0]
+	);
 }
 
 static const char short_options[] = "hap:rtn:s:u:v";

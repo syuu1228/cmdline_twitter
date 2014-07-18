@@ -172,9 +172,37 @@ bool TwitterClient::postRequest(const std::string url,HTTPRequestData &hdata,pic
 	return true;
 }
 
+// -------------------------------------------------------------------------------------------
+bool TwitterClient::getMentionsTimeline(
+	uint16_t count,
+	const std::string &since_id,const std::string &max_id,
+	picojson::array &rtimeline)
+{
+	HTTPRequestData	httpdata;
+	string ans;
+	string val;
+	picojson::value jsonval;
+	
+	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
+	
+	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
+	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
+	
+	if(! getRequest(
+		TL_RESOURCE_STATUSES_MEMTION,
+		httpdata,
+		jsonval)
+	){
+		vprint("err getRequest");
+		return false;
+	}
+	// タイムライン取得は配列である
+	rtimeline = jsonval.get<picojson::array>();
+	return true;
+}
 
-
-
+// 指定ユーザの発言を取得する。
+// useridとscreennameが同時に指定された場合は、useridを優先する
 bool TwitterClient::getUserTimeline(
 	const std::string &userid,const std::string &screenname,
 	uint16_t count,
@@ -224,6 +252,8 @@ bool TwitterClient::getMyTimeline(
 	bool include_rts,bool include_replies,
 	picojson::array &rtimeline)
 {
+	// 今のところスクリーンネームも一意であるはずだけど
+	// 今後のこともあると思うので
 	return getUserTimeline(
 		getMyUserID(),"",
 		count,
