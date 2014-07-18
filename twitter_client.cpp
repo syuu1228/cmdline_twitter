@@ -306,7 +306,6 @@ bool TwitterClient::destroyStatus(const std::string &idstr)
 	url += idstr;
 	url += JSON_ENDPOINT;
 	
-	// POSTデータはいらないっぽい？
 	if(! postRequest(
 		url,
 		httpdata,
@@ -337,6 +336,28 @@ bool TwitterClient::postStatus(const std::string &status)
 	}
 	return true;
 }
+
+// リツイートする
+bool TwitterClient::retweetStatus(const std::string &idstr)
+{
+	HTTPRequestData	httpdata;
+	picojson::value jsonval;
+
+	string url = TW_RESOURCE_STATUSES_RETWEET;
+	url += idstr;
+	url += JSON_ENDPOINT;
+	
+	if(! postRequest(
+		url,
+		httpdata,
+		jsonval)
+	){
+		vprint("err DestroyStatus");
+		return false;
+	}
+	return true;
+}
+
 
 // タイムライン検索
 bool TwitterClient::searchTweets(const std::string &q,const std::string &lang,const std::string &restype,

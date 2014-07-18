@@ -146,7 +146,7 @@ public:
 	// Tweets:Resource
 	bool destroyStatus(const std::string &idstr);
 	bool postStatus(const std::string &status);
-	
+	bool retweetStatus(const std::string &idstr);
 	
 	bool searchTweets(const std::string &q,const std::string &lang,const std::string &restype,
 		const std::string & since_id,const std::string & max_id,picojson::array &rtimeline);
