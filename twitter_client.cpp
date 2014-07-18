@@ -296,12 +296,33 @@ bool TwitterClient::getHomeTimeline(uint16_t count,
 	return true;
 }
 
-// タイムラインへ投稿
-bool TwitterClient::postStatus(const std::string status)
+
+bool TwitterClient::destroyStatus(const std::string &idstr)
 {
 	HTTPRequestData	httpdata;
-	string ans;
-	string val;
+	picojson::value jsonval;
+
+	string url = TW_RESOURCE_STATUSES_DEL_ID;
+	url += idstr;
+	url += JSON_ENDPOINT;
+	
+	// POSTデータはいらないっぽい？
+	if(! postRequest(
+		url,
+		httpdata,
+		jsonval)
+	){
+		vprint("err DestroyStatus");
+		return false;
+	}
+	return true;
+}
+
+
+// タイムラインへ投稿
+bool TwitterClient::postStatus(const std::string &status)
+{
+	HTTPRequestData	httpdata;
 	picojson::value jsonval;
 	
 	httpdata["status"] = status;

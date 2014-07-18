@@ -204,7 +204,8 @@ static void printTimeline(picojson::array &timeline)
 		ReplaceString(textstr,"&gt;",">");
 		ReplaceString(textstr,"&amp;","&");
 		cout << "\033[32m";
-		cout << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() <<" " << tmstr << endl;
+		cout << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() << " " 
+			 << obj["id_str"].to_str() << " " << tmstr << endl;
 		cout << "\033[37m";
 		cout << textstr << endl;
 	}
@@ -291,6 +292,12 @@ void ReadUserTimeline(TwitterClient &client,const std::string &name)
 }
 
 
+
+void RemoveTimeline(TwitterClient &client,const std::string &idstr)
+{
+	client.destroyStatus(idstr);
+}
+
 // 投稿する
 void PostTimeline(TwitterClient &client,const std::string &status)
 {
@@ -332,7 +339,9 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "                     -n オプションでユーザ名指定すると指定ユーザを読む\n"
 	 "                     -n オプションで\"\"と指定すると自分の発言を読む\n"
 	 "                     -n オプションで\"@\"と指定すると自分へのメンションを読む\n"
+	 "     --del           発言の削除 -iでID指定\n"
 	 "-n | --name          指定が必要な場合のユーザスクリーンネーム\n"
+	 "-i | --id            指定が必要な場合の発言ID\n"
 	 "-u | --user alies    エイリアス名指定:省略可(-a とも併用可能)\n"
 	 "-v | --verbose       (デバッグ用)余計な文字を出力しまくる\n"
 	 "\n"
@@ -358,11 +367,13 @@ namespace CMDLINE_OPT
 	enum {
 		PUT_HELP	= 1,
 		AUTH,
+		DELTW,
 		POST,
 		READTL,
 		SCREEN,
 		SEARCH,
 		USER,
+		ID,
 		VERBOSE,
 	};
 };
@@ -370,7 +381,9 @@ namespace CMDLINE_OPT
 static const struct option
 long_options[] = {
 	{ "auth",		no_argument,		NULL, CMDLINE_OPT::AUTH		},
+	{ "del",		no_argument,		NULL, CMDLINE_OPT::DELTW	},
 	{ "help",		no_argument,		NULL, CMDLINE_OPT::PUT_HELP	},
+	{ "id",			required_argument,	NULL, CMDLINE_OPT::ID		},
 	{ "name",		required_argument,	NULL, CMDLINE_OPT::SCREEN	},
 	{ "post",		required_argument,	NULL, CMDLINE_OPT::POST		},
 	{ "readtl",		no_argument,		NULL, CMDLINE_OPT::READTL	},
@@ -388,8 +401,9 @@ int main(int argc,char *argv[])
 	bool doPostTL=false;
 	bool doSearchTL = false;
 	bool doAuth = false;
+	bool doDeltw = false;
 	bool setScerrnName = false;
-	string status,aries,screenuser;
+	string status,aries,screenuser,idstr;
 
 	do_Verbose = false;
 	if(argc == 1){
@@ -414,6 +428,10 @@ int main(int argc,char *argv[])
 		case CMDLINE_OPT::AUTH:
 			doAuth = true;
 			break;
+
+		case CMDLINE_OPT::DELTW:
+			doDeltw = true;
+			break;
 			
 		case CMDLINE_OPT::POST:
 			status = optarg;
@@ -429,6 +447,10 @@ int main(int argc,char *argv[])
 			doSearchTL = true;
 	        break;
 			
+		case CMDLINE_OPT::ID:
+			idstr = optarg;
+	        break;
+
 		case CMDLINE_OPT::SCREEN:
 			setScerrnName = true;
 			screenuser = optarg;
@@ -462,13 +484,25 @@ int main(int argc,char *argv[])
 	initUserInfo(client);
 	
 	if(doPostTL)	PostTimeline(client,status);
+	if(doDeltw){
+		if(idstr.empty()){
+			// IDが指定されていない場合はとりあえず表示
+			ReadUserTimeline(client,"");
+			// IDを指定させる
+			cout << "発言を消すIDを指定してください" << endl;
+			cin >> idstr;
+		}
+		RemoveTimeline(client,idstr);
+	}
 	if(doReadTL){
 		if((!setScerrnName) && (screenuser.empty())){
+			// スクリーンネームが指定されてない場合はHOMEを表示
 			ReadHomeTimeline(client);
 		}else if(screenuser == "@"){
 			// 自分に対するメンション
 			ReadMemtioonTimeline(client);
 		}else{
+			// スクリーンネームが何か指定されているか空である場合
 			ReadUserTimeline(client,screenuser);
 		}
 	}

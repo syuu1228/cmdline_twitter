@@ -45,11 +45,11 @@ namespace TwitterRest1_1
 	static const std::string	TL_RESOURCE_STATUSES_RTOFME		= "https://api.twitter.com/1.1/statuses/retweets_of_me.json";
 	// Tweets
 	// Resource
-	static const std::string	TW_RESOURCE_STATUSES_RTS_ID		= "https://api.twitter.com/1.1/statuses/retweets/%s.json";
+	static const std::string	TW_RESOURCE_STATUSES_RTS_ID		= "https://api.twitter.com/1.1/statuses/retweets/"; 	// use ID.json
 	static const std::string	TW_RESOURCE_STATUSES_SHOW_ID	= "https://api.twitter.com/1.1/statuses/show.json";
-	static const std::string	TW_RESOURCE_STATUSES_DEL_ID		= "https://api.twitter.com/1.1/statuses/destroy/%s.json";
+	static const std::string	TW_RESOURCE_STATUSES_DEL_ID		= "https://api.twitter.com/1.1/statuses/destroy/"; 		// use ID.json
 	static const std::string	TW_RESOURCE_STATUSES_UPDATE		= "https://api.twitter.com/1.1/statuses/update.json";
-	static const std::string	TW_RESOURCE_STATUSES_RETWEET	= "https://api.twitter.com/1.1/statuses/retweet/%s.json";
+	static const std::string	TW_RESOURCE_STATUSES_RETWEET	= "https://api.twitter.com/1.1/statuses/retweet/"; 		// use ID.json
 	
 	// Search
 	static const std::string	TW_SEARCH_TWEETS				= "https://api.twitter.com/1.1/search/tweets.json";
@@ -87,6 +87,7 @@ namespace TwitterRest1_1
 	static const std::string	PARAM_NAME						= "name";
 	static const std::string	PARAM_SCREEN_NAME				= "screen_name";
 	
+	static const std::string	JSON_ENDPOINT					= ".json";
 	
 }; // namespace TwitterRest1_1
 
@@ -142,8 +143,9 @@ public:
 						bool include_rts,bool include_replies,
 						picojson::array &rtimeline);
 	
-	
-	bool postStatus(const std::string status);
+	// Tweets:Resource
+	bool destroyStatus(const std::string &idstr);
+	bool postStatus(const std::string &status);
 	
 	
 	bool searchTweets(const std::string &q,const std::string &lang,const std::string &restype,
