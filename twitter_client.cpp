@@ -180,8 +180,6 @@ bool TwitterClient::getMentionsTimeline(
 	picojson::array &rtimeline)
 {
 	HTTPRequestData	httpdata;
-	string ans;
-	string val;
 	picojson::value jsonval;
 	
 	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
@@ -212,8 +210,6 @@ bool TwitterClient::getUserTimeline(
 	picojson::array &rtimeline)
 {
 	HTTPRequestData	httpdata;
-	string ans;
-	string val;
 	picojson::value jsonval;
 	
 	if(! userid.empty()){
@@ -272,8 +268,6 @@ bool TwitterClient::getHomeTimeline(uint16_t count,
 	picojson::array &rtimeline)
 {
 	HTTPRequestData	httpdata;
-	string ans;
-	string val;
 	picojson::value jsonval;
 	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
 	httpdata[PARAM_INCLUDE_RTS]	= (include_rts		? VALUE_TRUE : VALUE_FALSE);
@@ -364,8 +358,6 @@ bool TwitterClient::searchTweets(const std::string &q,const std::string &lang,co
 		const std::string & since_id,const std::string & max_id,picojson::array &rtimeline)
 {
 	HTTPRequestData	httpdata;
-	string ans;
-	string val;
 	picojson::value jsonval;
 	
 	httpdata[PARAM_COUNT] 	= "100";
@@ -417,8 +409,6 @@ bool TwitterClient::createFavorites(const std::string &idstr)
 bool TwitterClient::verifyAccount(picojson::object &userinfo,bool last_status,bool entities)
 {
 	HTTPRequestData	httpdata;
-	string ans;
-	string val;
 	picojson::value jsonval;
 
 	httpdata["include_entities"]	= (entities ? VALUE_TRUE : VALUE_FALSE);
