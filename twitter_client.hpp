@@ -59,6 +59,10 @@ namespace TwitterRest1_1
 	
 	// Favorites
 	static const std::string	TW_FABORITES_CREATE				= "https://api.twitter.com/1.1/favorites/create.json";
+
+	// Lists
+	static const std::string	TW_LISTS_LIST					= "https://api.twitter.com/1.1/lists/list.json";
+	static const std::string	TW_LISTS_STATUSES				= "https://api.twitter.com/1.1/lists/statuses.json";
 	
 	// Help
 	static const std::string	TW_HELP_CONFIGURATION			= "https://api.twitter.com/1.1/help/configuration.json";
@@ -80,6 +84,9 @@ namespace TwitterRest1_1
 	static const std::string	PARAM_INCLUDE_RTS				= "include_rts";
 	static const std::string	PARAM_EXC_REPLIES				= "exclude_replies";
 	static const std::string	PARAM_USER_ID					= "user_id";
+	static const std::string	PARAM_SLUG						= "slug";
+	static const std::string	PARAM_OWNER_ID					= "owner_id";
+	static const std::string	PARAM_OWMER_SCREEN_NAME			= "owner_screen_name";
 	
 	
 	static const std::string	VALUE_TRUE						= "true";
@@ -158,6 +165,22 @@ public:
 	
 	// Favorites
 	bool createFavorites(const std::string &idstr);
+	
+	// List
+	bool getMyList(picojson::array &rlists);
+	bool getUserList(const std::string &userid,const std::string &screenname,picojson::array &rlists);
+
+	bool getMyListTimeline(const std::string &slug,uint16_t count,
+						const std::string &since_id,const std::string &max_id,
+						bool include_rts,
+						picojson::array &rtimeline);
+
+	bool getUserListTimeline(const std::string &slug,
+						const std::string &userid,const std::string &screenname,
+						uint16_t count,
+						const std::string &since_id,const std::string &max_id,
+						bool include_rts,
+						picojson::array &rtimeline);
 	
 	
 	inline void copyAuth(TwitterClient &rhs){

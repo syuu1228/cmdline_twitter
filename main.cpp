@@ -214,6 +214,27 @@ static void printTimeline(picojson::array &timeline)
 
 
 
+static void printList(picojson::array &lists)
+{
+	using namespace picojson;
+	using namespace std;
+	
+	string tmstr,textstr;
+
+	array::iterator it;
+	
+	for(it=lists.begin();it!=lists.end();it++){
+		object obj = it->get<object>();
+		cout << "\033[32m";
+		cout << obj["slug"].to_str() << "  " << obj["member_count"].to_str() << "users"
+			<< "  [" << obj["mode"].to_str() << "]" << endl;
+		cout << "\033[37m";
+		cout << obj["description"].to_str() << endl;
+	}
+	cout << "\033[0m";
+}
+
+
 // ユーザ情報の初期化
 bool initUserInfo(TwitterClient &client)
 {
@@ -315,6 +336,61 @@ void FavoriteTimeline(TwitterClient &client,const std::string &idstr)
 }
 
 
+void PutUserLists(TwitterClient &client,const std::string &name)
+{
+	picojson::array lists;
+	
+	if(name.empty()){
+		if(! client.getMyList(lists)
+		){
+			return;
+		}
+	}else{
+		if(! client.getUserList(
+			"",
+			name,
+			lists)
+		){
+			return;
+		}
+	}
+	printList(lists);
+}
+
+
+void ReadListTimeline(TwitterClient &client,const std::string &name,const std::string &listname)
+{
+	picojson::array timeline;
+
+	if(name.empty()){
+		if(! client.getMyListTimeline(
+			listname,
+			200,
+			"",
+			"",
+			true,			// RT含める
+			timeline)
+		){
+			return;
+		}
+	}else{
+		if(! client.getUserListTimeline(
+			listname,
+			"",
+			name,
+			200,
+			"",
+			"",
+			true,			// RT含める
+			timeline)
+		){
+			return;
+		}
+	}
+	printTimeline(timeline);
+}
+
+
 // キーワード検索
 void SearchTimeline(TwitterClient &client,const std::string &ques)
 {
@@ -353,6 +429,8 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "-d | --del           発言の削除 -iでID指定\n"
 	 "-R | --Retweet       リツイートする -iでID指定\n"
 	 "-F | --Fav           お気に入りに追加する -iでID指定\n"
+	 "-l | --list name     自分のリストnameの内容を読む\n"
+	 "                     nameで\"\"と指定すると自分のリスト一覧を表示する\n"
 	 "-n | --name          指定が必要な場合のユーザスクリーンネーム\n"
 	 "-i | --id            指定が必要な場合の発言ID\n"
 	 "-u | --user alies    エイリアス名指定:省略可(-a とも併用可能)\n"
@@ -389,6 +467,7 @@ namespace CMDLINE_OPT
 		SEARCH,
 		USER,
 		ID,
+		LIST,
 		VERBOSE,
 	};
 };
@@ -400,6 +479,7 @@ long_options[] = {
 	{ "Fav",		no_argument,		NULL, CMDLINE_OPT::FAVORITES	},
 	{ "help",		no_argument,		NULL, CMDLINE_OPT::PUT_HELP		},
 	{ "id",			required_argument,	NULL, CMDLINE_OPT::ID			},
+	{ "list",		required_argument,	NULL, CMDLINE_OPT::LIST			},
 	{ "name",		required_argument,	NULL, CMDLINE_OPT::SCREEN		},
 	{ "post",		required_argument,	NULL, CMDLINE_OPT::POST			},
 	{ "readtl",		no_argument,		NULL, CMDLINE_OPT::READTL		},
@@ -421,8 +501,9 @@ int main(int argc,char *argv[])
 	bool doSearchTL = false;
 	bool doAuth = false;
 	bool doDeltw = false;
+	bool doList = false;
 	bool setScerrnName = false;
-	string status,aries,screenuser,idstr;
+	string status,aries,screenuser,idstr,listname;
 
 	do_Verbose = false;
 	if(argc == 1){
@@ -472,6 +553,11 @@ int main(int argc,char *argv[])
 		case CMDLINE_OPT::SEARCH:
 			status = optarg;
 			doSearchTL = true;
+	        break;
+
+		case CMDLINE_OPT::LIST:
+			doList = true;
+			listname = optarg;
 	        break;
 			
 		case CMDLINE_OPT::ID:
@@ -543,6 +629,20 @@ int main(int argc,char *argv[])
 		FavoriteTimeline(client,idstr);
 	}
 	
+	if(doSearchTL)	SearchTimeline(client,status);
+
+	
+	if(doList){
+		if(listname.empty()){
+			PutUserLists(client,"");
+			// IDを指定させる
+			cout << "表示したいリスト名を指定してください" << endl;
+			cin >> listname;
+		}
+		ReadListTimeline(client,"",listname);
+		return 0;
+	}
+	
 	
 	if(doReadTL){
 		if((!setScerrnName) && (screenuser.empty())){
@@ -555,8 +655,8 @@ int main(int argc,char *argv[])
 			// スクリーンネームが何か指定されているか空である場合
 			ReadUserTimeline(client,screenuser);
 		}
+		return 0;
 	}
-	if(doSearchTL)	SearchTimeline(client,status);
 
 	return 0;
 }

@@ -401,6 +401,103 @@ bool TwitterClient::createFavorites(const std::string &idstr)
 	return true;
 }
 
+bool TwitterClient::getMyList(picojson::array &rlists)
+{
+	return getUserList(
+		getMyUserID(),"",
+		rlists
+	);	
+}
+
+
+bool TwitterClient::getUserList(const std::string &userid,const std::string &screenname,picojson::array &rlists)
+{
+	HTTPRequestData	httpdata;
+	picojson::value jsonval;
+	
+	if(! userid.empty()){
+		httpdata[PARAM_USER_ID] = userid;
+	}else if(! screenname.empty()){
+		httpdata[PARAM_SCREEN_NAME] = screenname;
+	}else{
+		// どっちかのパラメータをいれること
+		return false;
+	}
+		
+	
+	if(! getRequest(
+		TW_LISTS_LIST,
+		httpdata,
+		jsonval)
+	){
+		vprint("err getRequest");
+		return false;
+	}
+	// リストは配列である
+	rlists = jsonval.get<picojson::array>();
+	return true;	
+}
+
+
+	
+bool TwitterClient::getMyListTimeline(const std::string &slug,uint16_t count,
+						const std::string &since_id,const std::string &max_id,
+						bool include_rts,
+						picojson::array &rtimeline)
+{
+	return getUserListTimeline(
+		slug,
+		getMyUserID(),"",
+		count,
+		since_id,max_id,
+		include_rts,
+		rtimeline
+	);
+}
+
+bool TwitterClient::getUserListTimeline(const std::string &slug,
+						const std::string &userid,const std::string &screenname,
+						uint16_t count,
+						const std::string &since_id,const std::string &max_id,
+						bool include_rts,
+						picojson::array &rtimeline)
+{
+	HTTPRequestData	httpdata;
+	picojson::value jsonval;
+	
+	if(slug.empty())	return false;
+	
+	httpdata[PARAM_SLUG] = slug;
+	
+	if(! userid.empty()){
+		httpdata[PARAM_OWNER_ID] = userid;
+	}else if(! screenname.empty()){
+		httpdata[PARAM_OWMER_SCREEN_NAME] = screenname;
+	}else{
+		// どっちかのパラメータをいれること
+		return false;
+	}
+	
+	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
+	httpdata[PARAM_INCLUDE_RTS]	= (include_rts		? VALUE_TRUE : VALUE_FALSE);
+	
+	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
+	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
+	
+	
+	if(! getRequest(
+		TW_LISTS_STATUSES,
+		httpdata,
+		jsonval)
+	){
+		vprint("err getRequest");
+		return false;
+	}
+	// タイムライン取得は配列である
+	rtimeline = jsonval.get<picojson::array>();
+	return true;	
+}
+
 
 
 // 自分のユーザ情報の取得
