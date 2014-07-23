@@ -243,33 +243,48 @@ inline static void get_local_time_string(const std::string &src,std::string &dst
 	dst = tmpstr;
 }
 
+static void printTweet(picojson::object &tweet)
+{
+	using namespace picojson;
+	using namespace std;
+	string tmstr,textstr;
+	
+	if(! tweet["user"].is<object>()){
+		// ユーザ情報なし
+		return;
+	}
+	object uobj = tweet["user"].get<object>();	// ユーザ情報取得
+	// 時間を直す
+	get_local_time_string(tweet["created_at"].to_str(),tmstr);
+	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
+	textstr = tweet["text"].to_str();
+	ReplaceString(textstr,"&lt;","<");
+	ReplaceString(textstr,"&gt;",">");
+	ReplaceString(textstr,"&amp;","&");
+	// 実際に出力
+	cout << "\033[32m";
+	cout << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() << " " 
+		 << tweet["id_str"].to_str() << " " << tmstr << endl;
+	cout << "\033[37m";
+	cout << textstr << endl;
+	cout << "\033[0m";
+}
+
 // タイムラインを実際に出力する。検索結果表示やらHOME表示やらに使ってる
 static void printTimeline(picojson::array &timeline)
 {
 	using namespace picojson;
 	using namespace std;
-	
-	string tmstr,textstr;
 
 	// Twitterからの戻りは先が最新なので、逆順に表示
 	array::reverse_iterator it;
 	
 	for(it=timeline.rbegin();it!=timeline.rend();it++){
+		if(! it->is<object>()) continue;
 		object obj = it->get<object>();
-		object uobj = obj["user"].get<object>();	// 要素が中にある場合はこれ
-		get_local_time_string(obj["created_at"].to_str(),tmstr);
-		// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
-		textstr = obj["text"].to_str();
-		ReplaceString(textstr,"&lt;","<");
-		ReplaceString(textstr,"&gt;",">");
-		ReplaceString(textstr,"&amp;","&");
-		cout << "\033[32m";
-		cout << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() << " " 
-			 << obj["id_str"].to_str() << " " << tmstr << endl;
-		cout << "\033[37m";
-		cout << textstr << endl;
+		printTweet(obj);
 	}
-	cout << "\033[0m";
+//	cout << "\033[0m";
 }
 
 
@@ -378,26 +393,41 @@ void ReadUserTimeline(TwitterClient &client,const std::string &name)
 }
 
 
+void ReadTweet(TwitterClient &client,const std::string &idstr)
+{
+	picojson::object tweet;
+	if(! client.showTweet(idstr,tweet)){
+		putRequestError(client);
+		return;
+	}
+	printTweet(tweet);
+}
+
 
 void RemoveTimeline(TwitterClient &client,const std::string &idstr)
 {
 	if(! client.destroyStatus(idstr)){
 		putRequestError(client);
+		return;
 	}
 }
 
 // 投稿する
 void PostTimeline(TwitterClient &client,const std::string &status)
 {
-	if(! client.postStatus(status)){
+	picojson::object tweet;
+	if(! client.postStatus(status,tweet)){
 		putRequestError(client);
+		return;
 	}
+	printTweet(tweet);
 }
 
 void RetweetTimeline(TwitterClient &client,const std::string &idstr)
 {
 	if(! client.retweetStatus(idstr)){
 		putRequestError(client);
+		return;
 	}
 }
 
@@ -405,6 +435,7 @@ void FavoriteTimeline(TwitterClient &client,const std::string &idstr)
 {
 	if(! client.createFavorites(idstr)){
 		putRequestError(client);
+		return;
 	}
 }
 
@@ -686,7 +717,11 @@ int main(int argc,char *argv[])
 		return 0;
 	}
 	
-	if(doPostTL)	PostTimeline(client,status);
+	if(doPostTL){
+		PostTimeline(client,status);
+		return 0;
+	}
+	
 	if(doDeltw){
 		if(idstr.empty()){
 			// IDが指定されていない場合はとりあえず表示
@@ -696,6 +731,7 @@ int main(int argc,char *argv[])
 			cin >> idstr;
 		}
 		RemoveTimeline(client,idstr);
+		return 0;
 	}
 	if(doRetweetTL){
 		if(idstr.empty()){
@@ -706,6 +742,7 @@ int main(int argc,char *argv[])
 			cin >> idstr;
 		}
 		RetweetTimeline(client,idstr);
+		return 0;
 	}
 	
 	if(doFavTL){
@@ -717,10 +754,13 @@ int main(int argc,char *argv[])
 			cin >> idstr;
 		}
 		FavoriteTimeline(client,idstr);
+		return 0;
 	}
 	
-	if(doSearchTL)	SearchTimeline(client,status);
-
+	if(doSearchTL){
+		SearchTimeline(client,status);
+		return 0;
+	}
 	
 	if(doList){
 		if(listname.empty()){
@@ -735,7 +775,10 @@ int main(int argc,char *argv[])
 	
 	
 	if(doReadTL){
-		if((!setScerrnName) && (screenuser.empty())){
+		if(! idstr.empty()){
+			// IDに何か指定されている場合は対象のIDを表示
+			ReadTweet(client,idstr);
+		}else if((!setScerrnName) && (screenuser.empty())){
 			// スクリーンネームが指定されてない場合はHOMEを表示
 			ReadHomeTimeline(client);
 		}else if(screenuser == "@"){

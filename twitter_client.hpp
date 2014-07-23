@@ -87,6 +87,7 @@ namespace TwitterRest1_1
 	static const std::string	PARAM_SLUG						= "slug";
 	static const std::string	PARAM_OWNER_ID					= "owner_id";
 	static const std::string	PARAM_OWMER_SCREEN_NAME			= "owner_screen_name";
+	static const std::string	PARAM_TRIM_USER					= "trim_user";
 	
 	
 	static const std::string	VALUE_TRUE						= "true";
@@ -156,8 +157,9 @@ public:
 						picojson::array &rtimeline);
 	
 	// Tweets:Resource
+	bool showTweet(const std::string &idstr,picojson::object &tweet);
 	bool destroyStatus(const std::string &idstr);
-	bool postStatus(const std::string &status);
+	bool postStatus(const std::string &status,picojson::object &tweet);
 	bool retweetStatus(const std::string &idstr);
 	
 	// Search

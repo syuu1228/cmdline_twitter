@@ -265,6 +265,11 @@ bool TwitterClient::getMentionsTimeline(
 		return false;
 	}
 	// タイムライン取得は配列である
+	if(! jsonval.is<picojson::array>()){
+		m_lasterror = "JSON error is not array data";
+		vprint(m_lasterror);
+		return false;
+	}
 	rtimeline = jsonval.get<picojson::array>();
 	return true;
 }
@@ -307,6 +312,11 @@ bool TwitterClient::getUserTimeline(
 		return false;
 	}
 	// タイムライン取得は配列である
+	if(! jsonval.is<picojson::array>()){
+		m_lasterror = "JSON error is not array data";
+		vprint(m_lasterror);
+		return false;
+	}	
 	rtimeline = jsonval.get<picojson::array>();
 	return true;
 }
@@ -355,7 +365,40 @@ bool TwitterClient::getHomeTimeline(uint16_t count,
 		return false;
 	}
 	// タイムライン取得は配列である
+	if(! jsonval.is<picojson::array>()){
+		m_lasterror = "JSON error is not array data";
+		vprint(m_lasterror);
+		return false;
+	}
+	
 	rtimeline = jsonval.get<picojson::array>();
+	return true;
+}
+
+
+bool TwitterClient::showTweet(const std::string &idstr,picojson::object &tweet)
+{
+	HTTPRequestData	httpdata;
+	picojson::value jsonval;
+
+	httpdata[PARAM_ID]				= idstr;
+	httpdata[PARAM_TRIM_USER] 		= VALUE_FALSE;
+	httpdata["include_my_retweet"] 	= VALUE_TRUE;
+	
+	if(! getRequest(
+		TW_RESOURCE_STATUSES_SHOW_ID,
+		httpdata,
+		jsonval)
+	){
+		vprint("err DestroyStatus");
+		return false;
+	}
+	if(! jsonval.is<picojson::object>()){
+		m_lasterror = "JSON error is not object data";
+		vprint(m_lasterror);
+		return false;
+	}
+	tweet = jsonval.get<picojson::object>();
 	return true;
 }
 
@@ -382,12 +425,13 @@ bool TwitterClient::destroyStatus(const std::string &idstr)
 
 
 // タイムラインへ投稿
-bool TwitterClient::postStatus(const std::string &status)
+bool TwitterClient::postStatus(const std::string &status,picojson::object &tweet)
 {
 	HTTPRequestData	httpdata;
 	picojson::value jsonval;
 	
 	httpdata["status"] = status;
+	httpdata[PARAM_TRIM_USER] = VALUE_FALSE;
 	
 	if(! postRequest(
 		TW_RESOURCE_STATUSES_UPDATE,
@@ -397,6 +441,13 @@ bool TwitterClient::postStatus(const std::string &status)
 		vprint("err putStatus");
 		return false;
 	}
+	if(! jsonval.is<picojson::object>()){
+		m_lasterror = "JSON error is not object data";
+		vprint(m_lasterror);
+		return false;
+	}
+	tweet = jsonval.get<picojson::object>();
+	
 	return true;
 }
 
@@ -503,6 +554,11 @@ bool TwitterClient::getUserList(const std::string &userid,const std::string &scr
 		return false;
 	}
 	// リストは配列である
+	if(! jsonval.is<picojson::array>()){
+		m_lasterror = "JSON error is not array data";
+		vprint(m_lasterror);
+		return false;
+	}
 	rlists = jsonval.get<picojson::array>();
 	return true;	
 }
@@ -563,6 +619,11 @@ bool TwitterClient::getUserListTimeline(const std::string &slug,
 		return false;
 	}
 	// タイムライン取得は配列である
+	if(! jsonval.is<picojson::array>()){
+		m_lasterror = "JSON error is not array data";
+		vprint(m_lasterror);
+		return false;
+	}
 	rtimeline = jsonval.get<picojson::array>();
 	return true;	
 }
