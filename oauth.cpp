@@ -27,9 +27,9 @@
 #include "base64.hpp"
 #include <cstring>
 #include <cstdio>
-#include <boost/format.hpp>
-#include <boost/random.hpp>
-#include <boost/tokenizer.hpp>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 #include <sys/time.h>
 
 using namespace std;
@@ -74,19 +74,19 @@ OAuth::~OAuth()
 //
 void OAuth::recalcTimestamp()
 {
-	using namespace boost;
-	using namespace boost::random;
 	
 	time_t tm = time(NULL);
-	mt19937 gen(static_cast<unsigned long>(get_time_usecond()));
-	uniform_int<> dst(1,12345678);
 
 #ifdef TIMETEST	
 	m_ArgMap[OAuthConst::ARG_TIMESTAMP]	= "1404954187";
 	m_ArgMap[OAuthConst::ARG_NONCE]		= "1aeee8bc909ebb55752435f0677e1fef";
 #else
-	m_ArgMap[OAuthConst::ARG_TIMESTAMP]	= (boost::format("%ld") % static_cast<long int>(tm)).str();
-	m_ArgMap[OAuthConst::ARG_NONCE]		= (boost::format("%x") % (dst(gen))).str();
+	ostringstream stream;
+	stream << static_cast<long int>(tm);
+	m_ArgMap[OAuthConst::ARG_TIMESTAMP]	= stream.str();
+	stream.str("");
+	stream << static_cast<long int>(tm) << static_cast<long int>(get_time_usecond());
+	m_ArgMap[OAuthConst::ARG_NONCE] = stream.str();
 #endif
 }
 
@@ -263,45 +263,37 @@ bool OAuth::makeResuestHeader(const std::string &request,const std::string &url,
 // しかるべきデータを格納する
 bool OAuth::parsingAuthResponce(const std::string &responce,std::string &confirmed,OAuthOtherRes &other)
 {
-	using namespace boost;
-	typedef char_separator<char> csep;
-	typedef tokenizer<csep> ctok;
+	string arg,val,tmpstr;
 	
-	csep		asep("&");
-	csep		ysep("=");
-	ctok 		tokens(responce,asep);
-	ctok::iterator itr;
-	string arg,val;
-
 	confirmed.clear();
 	other.clear();
-
-	// まず&で分割して、それをさらに=で分割
-	for(itr=tokens.begin();itr != tokens.end();itr++){
-		ctok 	ytokens(*itr,ysep);
-		ctok::iterator yitr = ytokens.begin();
-		arg = *yitr;	yitr++;
-		if(yitr != ytokens.end()) val = *yitr;
-
+	
+	size_t curr=0,found=0;
+	size_t found2;
+	
+	while(found != string::npos){
+		found = responce.find_first_of('&',curr);
+		tmpstr = responce.substr(curr,found - curr);
+		curr = found + 1;
+		
+		found2 = tmpstr.find_first_of('=');
+		if(found2 == string::npos) continue;
+		arg = tmpstr.substr(0,found2);
+		val = tmpstr.substr(found2+1);
+		
 		// 目的のARG値があるかどうか調べる
 		if(arg == OAuthConst::ARG_TOKEN){
 			setAccessKey(val);
-			continue;
-		}
-		if(arg == OAuthConst::ARG_TOKENSECRET){
+		}else if(arg == OAuthConst::ARG_TOKENSECRET){
 			setAccessSecret(val);
-			continue;
-		}
-		if(arg == OAuthConst::ARG_CONFIRMED){
+		}else if(arg == OAuthConst::ARG_CONFIRMED){
 			confirmed = val;
-			continue;
-		}
-		if(arg == OAuthConst::ARG_VERIFIER){
+		}else if(arg == OAuthConst::ARG_VERIFIER){
 			setVerifier(val);
-			continue;
+		}else{
+			// そのほかの要素はとりあえず登録しておく
+			other[arg] = val;
 		}
-		// そのほかの要素はとりあえず登録しておく
-		other[arg] = val;
 	}
 	return true;
 }

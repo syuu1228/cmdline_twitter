@@ -15,7 +15,6 @@ Linuxのターミナルなどで使えるTwitterクライアントです。
 cmdline_twitterは以下のパッケージを使用しています。
 * g++
 * STL(libstdc++)
-* Boost
 * libcurl-dev (opensslでもnssでも何でもいい)
 
 ので、あらかじめインストールしてください。

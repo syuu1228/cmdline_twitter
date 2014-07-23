@@ -602,10 +602,10 @@ long_options[] = {
 	{ 0, 0, 0, 0 }
 };
 
+
 int main(int argc,char *argv[])
 {
 	TwitterClient client;
-
 	bool doReadTL=false;
 	bool doRetweetTL=false;
 	bool doFavTL=false;

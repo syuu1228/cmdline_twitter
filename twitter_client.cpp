@@ -25,10 +25,21 @@
 //
 #include "twitter_client.hpp"
 #include "base64.hpp"
-#include <boost/format.hpp>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 using namespace std;
 using namespace TwitterRest1_1;
+
+
+template<typename X> inline std::string tostring(X val)
+{
+	ostringstream stream;
+	stream << val;
+	return stream.str();
+}
+
 
 
 TwitterClient::TwitterClient()
@@ -251,7 +262,7 @@ bool TwitterClient::getMentionsTimeline(
 	HTTPRequestData	httpdata;
 	picojson::value jsonval;
 	
-	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
+	httpdata[PARAM_COUNT] = tostring(count);
 	
 	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
 	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
@@ -295,7 +306,7 @@ bool TwitterClient::getUserTimeline(
 		return false;
 	}
 	
-	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
+	httpdata[PARAM_COUNT] = tostring(count);
 	httpdata[PARAM_INCLUDE_RTS]	= (include_rts		? VALUE_TRUE : VALUE_FALSE);
 	httpdata[PARAM_EXC_REPLIES]	= (include_replies	? VALUE_FALSE : VALUE_TRUE);
 	
@@ -348,7 +359,7 @@ bool TwitterClient::getHomeTimeline(uint16_t count,
 {
 	HTTPRequestData	httpdata;
 	picojson::value jsonval;
-	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
+	httpdata[PARAM_COUNT] = tostring(count);
 	httpdata[PARAM_INCLUDE_RTS]	= (include_rts		? VALUE_TRUE : VALUE_FALSE);
 	httpdata[PARAM_EXC_REPLIES]	= (include_replies	? VALUE_FALSE : VALUE_TRUE);
 	
@@ -603,7 +614,7 @@ bool TwitterClient::getUserListTimeline(const std::string &slug,
 		return false;
 	}
 	
-	httpdata[PARAM_COUNT] = (boost::format("%d") % count).str();
+	httpdata[PARAM_COUNT] = tostring(count);
 	httpdata[PARAM_INCLUDE_RTS]	= (include_rts		? VALUE_TRUE : VALUE_FALSE);
 	
 	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
