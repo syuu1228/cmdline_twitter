@@ -18,7 +18,7 @@ clean:
 
 
 $(TARGET): $(OBJS)
-	$(AR) rvs  -o $@ $(OBJS)
+	$(AR) rvs $@ $(OBJS)
 
 
 .cpp.o:
