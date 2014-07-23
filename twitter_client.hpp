@@ -115,9 +115,12 @@ protected:
 	std::string	m_user_screen;				// スクリーン名(@でついているあれ)
 	std::string	m_user_id;					// ユーザID
 	
+	std::string	m_lasterror;				// エラー用文字列
 	
 	bool getRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval);
 	bool postRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval);
+	
+	bool parseJson(picojson::value &jsonval);
 	
 public:
 	TwitterClient();
@@ -193,6 +196,17 @@ public:
 	
 	inline void serVerbose(bool set)					{m_verbose = set;}
 	bool		isVerbose()								{return m_verbose;}
+	
+	// TESTREQUEST
+	bool testRequest(const std::string url,
+		HTTPRequestData &hdata,
+		bool getreq,
+		picojson::value &jsonval,
+		std::string &result,
+		unsigned long &httpres
+	);
+	
+	inline std::string getLastErrorMessage()			{return m_lasterror;}
 	
 	inline void vprint(const std::string &str){
 		if(! isVerbose()) return;

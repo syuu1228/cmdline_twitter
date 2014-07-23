@@ -162,6 +162,66 @@ bool readAccessKey(TwitterClient &client,const string &aries)
 	return true;
 }
 
+void putRequestError(TwitterClient &client)
+{
+	cout << "リクエストに失敗" << endl;
+	cout << client.getLastErrorMessage() << endl;
+}
+
+
+
+void RequestTest(TwitterClient &client)
+{
+	string url;
+	string responce;
+	string param,value;
+	HTTPRequestData	httpdata;
+	picojson::value jsonval;
+	int getpost;
+	bool bget=false;
+	unsigned long rescode=0;
+	
+	cout << "APIのURLを指定してください" << endl;
+	cin >> url;
+	
+	cout << "GETかPOSTか指定してください(Get=1 post=それ以外)" << endl;
+	cin >> getpost;
+	if(getpost==1){
+		bget = true;
+	}
+	cout << "パラメータ、RETURN、値…の順番で入力してください。CTRL+D で終わります" << endl;
+	
+	while(1){
+		cin >> param;
+		if(cin.eof())break;
+		if(cin.fail())break;
+		cin >> value;
+		if(cin.eof())break;
+		if(cin.fail())break;
+		
+		httpdata[param] = value;
+		cout << param << ":" << value << endl;
+	}
+	
+	if(! client.testRequest(
+		url,
+		httpdata,
+		bget,
+		jsonval,
+		responce,
+		rescode)
+	){
+		putRequestError(client);
+	}
+	cout << "\n" << endl;
+	cout << "\nHTTP Responce Data" << endl;	
+	cout << responce << endl;
+	cout << "\nHTTP Responce Code" << endl;	
+	cout << rescode << endl;
+	
+}
+
+
 // Twitterでは標準時刻(UTC)が記述されているのでこれを現地時刻に直す
 inline static void get_local_time_string(const std::string &src,std::string &dst)
 {
@@ -241,6 +301,7 @@ bool initUserInfo(TwitterClient &client)
 	picojson::object info;
 	// ただユーザ名とスクリーンネームとIDが知りたいだけ
 	if(! client.verifyAccount(info)){
+		putRequestError(client);
 		return false;
 	}
 	return true;
@@ -257,6 +318,7 @@ void ReadMemtioonTimeline(TwitterClient &client)
 		"",
 		timeline)
 	){
+		putRequestError(client);
 		return;
 	}
 	printTimeline(timeline);
@@ -274,6 +336,7 @@ void ReadHomeTimeline(TwitterClient &client)
 		false,			// @含めない
 		timeline)
 	){
+		putRequestError(client);
 		return;
 	}
 	printTimeline(timeline);
@@ -293,6 +356,7 @@ void ReadUserTimeline(TwitterClient &client,const std::string &name)
 			true,			// @含める
 			timeline)
 		){
+			putRequestError(client);
 			return;
 		}
 	}else{
@@ -306,6 +370,7 @@ void ReadUserTimeline(TwitterClient &client,const std::string &name)
 			true,			// @含める
 			timeline)
 		){
+			putRequestError(client);
 			return;
 		}
 	}
@@ -316,23 +381,31 @@ void ReadUserTimeline(TwitterClient &client,const std::string &name)
 
 void RemoveTimeline(TwitterClient &client,const std::string &idstr)
 {
-	client.destroyStatus(idstr);
+	if(! client.destroyStatus(idstr)){
+		putRequestError(client);
+	}
 }
 
 // 投稿する
 void PostTimeline(TwitterClient &client,const std::string &status)
 {
-	client.postStatus(status);
+	if(! client.postStatus(status)){
+		putRequestError(client);
+	}
 }
 
 void RetweetTimeline(TwitterClient &client,const std::string &idstr)
 {
-	client.retweetStatus(idstr);
+	if(! client.retweetStatus(idstr)){
+		putRequestError(client);
+	}
 }
 
 void FavoriteTimeline(TwitterClient &client,const std::string &idstr)
 {
-	client.createFavorites(idstr);
+	if(! client.createFavorites(idstr)){
+		putRequestError(client);
+	}
 }
 
 
@@ -343,6 +416,7 @@ void PutUserLists(TwitterClient &client,const std::string &name)
 	if(name.empty()){
 		if(! client.getMyList(lists)
 		){
+			putRequestError(client);
 			return;
 		}
 	}else{
@@ -351,6 +425,7 @@ void PutUserLists(TwitterClient &client,const std::string &name)
 			name,
 			lists)
 		){
+			putRequestError(client);
 			return;
 		}
 	}
@@ -371,6 +446,7 @@ void ReadListTimeline(TwitterClient &client,const std::string &name,const std::s
 			true,			// RT含める
 			timeline)
 		){
+			putRequestError(client);
 			return;
 		}
 	}else{
@@ -384,6 +460,7 @@ void ReadListTimeline(TwitterClient &client,const std::string &name,const std::s
 			true,			// RT含める
 			timeline)
 		){
+			putRequestError(client);
 			return;
 		}
 	}
@@ -403,6 +480,7 @@ void SearchTimeline(TwitterClient &client,const std::string &ques)
 		"",
 		timeline)
 	){
+		putRequestError(client);
 		return;
 	}
 	printTimeline(timeline);
@@ -434,6 +512,7 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "-n | --name          指定が必要な場合のユーザスクリーンネーム\n"
 	 "-i | --id            指定が必要な場合の発言ID\n"
 	 "-u | --user alies    エイリアス名指定:省略可(-a とも併用可能)\n"
+	 "-T | --Test          (テスト用)APIのエンドポイントを指定してAPIリクエストを行う\n"
 	 "-v | --verbose       (デバッグ用)余計な文字を出力しまくる\n"
 	 "\n"
 	 "-u で指定できるエイリアス名は別アカウントで使いたい場合に便利です\n"
@@ -468,6 +547,7 @@ namespace CMDLINE_OPT
 		USER,
 		ID,
 		LIST,
+		TEST,
 		VERBOSE,
 	};
 };
@@ -486,6 +566,7 @@ long_options[] = {
 	{ "Retweet",	no_argument,		NULL, CMDLINE_OPT::RETWEET		},
 	{ "search",		required_argument,	NULL, CMDLINE_OPT::SEARCH		},
 	{ "user",		required_argument,	NULL, CMDLINE_OPT::USER			},
+	{ "Test",		no_argument,		NULL, CMDLINE_OPT::TEST			},
 	{ "verbose",	no_argument,		NULL, CMDLINE_OPT::VERBOSE		},
 	{ 0, 0, 0, 0 }
 };
@@ -502,6 +583,7 @@ int main(int argc,char *argv[])
 	bool doAuth = false;
 	bool doDeltw = false;
 	bool doList = false;
+	bool doTest = false;
 	bool setScerrnName = false;
 	string status,aries,screenuser,idstr,listname;
 
@@ -576,6 +658,10 @@ int main(int argc,char *argv[])
 		case CMDLINE_OPT::VERBOSE:
 			do_Verbose = true;
 	        break;
+
+		case CMDLINE_OPT::TEST:
+			doTest = true;
+	        break;
 			
 		default:
 	        usage(stderr, argc, argv);
@@ -595,6 +681,10 @@ int main(int argc,char *argv[])
 	}
 	// とりあえず自分自身の情報を取得
 	initUserInfo(client);
+	if(doTest){
+		RequestTest(client);
+		return 0;
+	}
 	
 	if(doPostTL)	PostTimeline(client,status);
 	if(doDeltw){

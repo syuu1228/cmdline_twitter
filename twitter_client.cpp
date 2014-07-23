@@ -65,13 +65,15 @@ bool TwitterClient::Authentication_GetURL(std::string &rurl)
 	string callbk;
 	
 	rurl.clear();
+	m_lasterror.clear();
 	// まずはTemporaryCredentialsをする
 	if(! m_auth.TemporaryCredentials(
 		&m_peer,
 		OAUTH1_REQUEST_TOKEN,
 		callbk)
 	){
-		vprint("err TemporaryCredentials");
+		m_lasterror = "TemporaryCredentials failed";
+		vprint(m_lasterror);
 		return false;
 	}
 	// Resource Owner AuthorizatioのためのURLを生成する
@@ -85,15 +87,18 @@ bool TwitterClient::Authentication_GetURL(std::string &rurl)
 bool TwitterClient::Authentication_Finish(const std::string &pin)
 {
 	// Owner Authorizationを行い、PINの正当性を確認
-	// 成功したらAccessKeyとSecretは以後永続的に使える
+	// 成功したらAccessKeyとSecretは以後永続的に使える	
 	OAuthOtherRes twitter_res;
+	
+	m_lasterror.clear();
 	m_auth.setVerifier(pin);
 	if(! m_auth.TokenCredentials(
 		&m_peer,
 		OAUTH1_ACCESS_TOKEN,
 		twitter_res)
 	){
-		vprint("err TokenCredentials");
+		m_lasterror = "TokenCredentials failed";
+		vprint(m_lasterror);
 		return false;
 	}
 	// 認証OKだったのでスクリーンネームとUSERID取得
@@ -102,10 +107,65 @@ bool TwitterClient::Authentication_Finish(const std::string &pin)
 	return true;
 }
 
+// JSONの解析を実際に行う
+bool TwitterClient::parseJson(picojson::value &jsonval)
+{
+	unsigned long httpcode = m_peer.getLastResponceCode();
+	// Verbose時はここで受けたデータを表示
+	vprint(m_peer.getResponceString());	
+
+	// 5xx系のエラーの場合はたぶん落ちてるとかそんなのなのでまともな
+	// JSONを期待してはいけない。ここはエラーとしてJSON解析はしない
+	if(httpcode >= 500){
+		m_lasterror = "responce HTTP 5xx \n";
+		m_lasterror = "HTTP Message \n";
+		m_lasterror += m_peer.getResponceString();
+		vprint(m_lasterror);
+		return false;
+	}
+	
+	// JSONで帰ってくるので解析をする
+	string json_err;
+	string responce = m_peer.getResponceString();
+		picojson::parse(jsonval,responce.begin(),responce.end(),&json_err);
+	if(!json_err.empty()){
+		m_lasterror = "[JSON] parse err!!! ";
+		m_lasterror += json_err;
+		m_lasterror += responce;
+		vprint(m_lasterror);
+		return false;
+	}
+	if(httpcode >= 400){
+		// パラメータエラーのときはHTTPコードが400系を返す
+		picojson::object errobject = jsonval.get<picojson::object>();
+		if(! errobject["errors"].is<picojson::array>()){
+			// まともなJSONではなさそう…
+			m_lasterror = "Twitter responce error \n";
+			m_lasterror += m_peer.getResponceString();
+			vprint(m_lasterror);
+			return false;
+		}
+		picojson::array errinfoary = errobject["errors"].get<picojson::array>();
+		picojson::object errinfo = errinfoary[0].get<picojson::object>();
+		
+		m_lasterror = "Twitter return error \n";
+		m_lasterror += "Code: ";
+		m_lasterror += errinfo["code"].to_str();
+		m_lasterror += "\nMessage: \n";
+		m_lasterror += errinfo["message"].to_str();
+		vprint(m_lasterror);
+		return false;
+	}
+	return true;
+}
+
+
+
 // GETリクエストを投げる共通関数。ついでにJSON解析までやってしまう。
 bool TwitterClient::getRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval)
 {
 	string authdata;
+	m_lasterror.clear();
 	
 	m_auth.makeResuestHeader(
 		"GET",
@@ -119,23 +179,12 @@ bool TwitterClient::getRequest(const std::string url,HTTPRequestData &hdata,pico
 		url,
 		hdata)
 	){
-		vprint("err peer.open ");
+		m_lasterror = "HTTP Get request failed";
+		vprint(m_lasterror);
 		return false;
 	}
-	// Verbose時はここで受けたデータを表示
-	vprint(m_peer.getResponceString());	
 	// JSONで帰ってくるので解析をする
-	string json_err;
-	string responce = m_peer.getResponceString();
-		picojson::parse(jsonval,responce.begin(),responce.end(),&json_err);
-	if(!json_err.empty()){
-		vprint("[JSON] parse err!!!");
-		vprint(json_err);
-		vprint(responce);
-		return false;
-	}
-	
-	return true;
+	return parseJson(jsonval);
 }
 
 
@@ -143,6 +192,7 @@ bool TwitterClient::getRequest(const std::string url,HTTPRequestData &hdata,pico
 bool TwitterClient::postRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval)
 {
 	string authdata;
+	m_lasterror.clear();
 	
 	m_auth.makeResuestHeader(
 		"POST",
@@ -156,22 +206,41 @@ bool TwitterClient::postRequest(const std::string url,HTTPRequestData &hdata,pic
 		url,
 		hdata)
 	){
-		vprint("err peer.open");
-		return false;
+		m_lasterror = "HTTP Post request failed";
+		vprint(m_lasterror);
 	}
 	// JSONで帰ってくるので解析をする
-	string json_err;
-	string responce = m_peer.getResponceString();
-	picojson::parse(jsonval,responce.begin(),responce.end(),&json_err);
-	if(!json_err.empty()){
-		vprint("[JSON] parse err!!!");
-		vprint(json_err);
-		vprint(responce);
-		return false;
-	}
-	
-	return true;
+	return parseJson(jsonval);
 }
+
+
+bool TwitterClient::testRequest(const std::string url,HTTPRequestData &hdata,
+	bool getreq,picojson::value &jsonval,std::string &result,
+	unsigned long &httpres)
+{
+	bool ret = true;
+	if(getreq){
+		if(! getRequest(
+			url,
+			hdata,
+			jsonval)
+		){
+			ret = false;
+		}
+	}else{
+		if(! postRequest(
+			url,
+			hdata,
+			jsonval)
+		){
+			ret = false;
+		}
+	}
+	result = m_peer.getResponceString();
+	httpres = m_peer.getLastResponceCode();
+	return ret;
+}
+
 
 // -------------------------------------------------------------------------------------------
 bool TwitterClient::getMentionsTimeline(
