@@ -1,6 +1,7 @@
 cmdline_twitter
 ===============
 Linuxのターミナルなどで使えるTwitterクライアントです。
+MSYS2のターミナル(minty)でも使用できます。
 1ラインで投稿とかできるので、cronと併用してBOT的な使い方もできます。
 
 
@@ -8,6 +9,7 @@ Linuxのターミナルなどで使えるTwitterクライアントです。
 ===============
 コンシューマキーとシークレットの取り扱いの関係上、バイナリはありません。
 使うにはまず「コンパイル」してください。
+環境はLinux(Ubuntuで確認)とWindows(MSYS2を使用)でコンパイル可能です。
 
 コンパイル
 --------
@@ -21,8 +23,15 @@ cmdline_twitterは以下のパッケージを使用しています。
 
 Ubuntuの場合は次のようにしたら良いかもしれません。
 ````
-$ sudo apt-get install g++ boost-all libstdc++6 libboost-all-dev libcurl4-nss-dev
+$ sudo apt-get install g++ libstdc++6 libcurl4-nss-dev
 ````
+
+Windows環境(MSYS2)の場合は次のようにすると良いかもしれません
+````
+$ pacman -Si mingw-w64-i686-gcc  mingw-w64-i686-gcc-libs libcurl  libcurl-devel
+````
+
+
 
 次に、http://blog.uklab.jp/web/add-application-for-twitter/ のあたりを参考に、Twitterのdepeloper登録を行い、適当にアプリケーションの登録を行ってください。
 コールバックURLは空欄でかまいません。
@@ -92,6 +101,8 @@ Homeタイムラインの取得はREST APIを使っています。
 つまり、UserStreamではないので一分間に15回以上やるとエラーになります。
 
 今のところ、Homeタイムラインの表示でRTや@は表示しない仕様になっています。
+
+MSYS2環境では発言のタイムスタンプが標準時刻になっています。
 
 
 TODO
