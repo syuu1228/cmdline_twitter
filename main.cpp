@@ -52,6 +52,39 @@ static const string	APP_DIR = ".ctw";
 
 static bool do_Verbose = false;		// -vが指定されるとTRUE
 
+
+static int makedir(const string &dirname,mode_t mode)
+{
+#if defined(__MINGW32__)
+	return mkdir(dirname.c_str());
+#else
+	return mkdir(dirname.c_str(),mode);
+#endif
+}
+
+// MSYSの場合、なぜかコマンドラインだけはSJISのままなのでUTF8にコンバートする
+void convargv(char *src,std::string &dest)
+{
+#if defined(__MINGW32__)
+	iconv_t ic = iconv_open("UTF-8", "SJIS");
+	char *pin=src;
+	char *pou;
+	size_t ilen = strlen(src);
+	// 半角かなの変換にUTF8は3オクテット必要
+	size_t olen = ilen*6+10;
+
+	dest.resize(olen);
+	pou = &dest[0];
+	
+	iconv(ic,&pin,&ilen,&pou,&olen);
+	*pou = '\0';
+	
+	iconv_close(ic);
+#else
+	dest = src;
+#endif
+}
+
 // アプリ設定ファイル用ディレクトリを取得＆作成
 static bool get_app_dir(string &dirname)
 {
@@ -61,7 +94,7 @@ static bool get_app_dir(string &dirname)
 	dirname += APP_DIR;
 	
 	if(stat(dirname.c_str(),&st) != 0){
-		if(mkdir(dirname.c_str(),0700) != 0){
+		if(makedir(dirname.c_str(),0700) != 0){
 			return false;
 		}
 	}
@@ -225,6 +258,10 @@ void RequestTest(TwitterClient &client)
 // Twitterでは標準時刻(UTC)が記述されているのでこれを現地時刻に直す
 inline static void get_local_time_string(const std::string &src,std::string &dst)
 {
+#if defined(__MINGW32__)
+	// TODO: mingwにはstrptimeなどがないので今はこうしている…
+	dst = src;
+#else
 	string tmstr;
 	time_t tm;
 	struct tm tm_src,tm_dest;
@@ -241,6 +278,7 @@ inline static void get_local_time_string(const std::string &src,std::string &dst
 	
 	strftime(tmpstr,sizeof(tmpstr),"[%Y-%m-%d %T]",&tm_dest);
 	dst = tmpstr;
+#endif	//__MINGW32__
 }
 
 static void printTweet(picojson::object &tweet)
@@ -647,7 +685,7 @@ int main(int argc,char *argv[])
 			break;
 			
 		case CMDLINE_OPT::POST:
-			status = optarg;
+			convargv(optarg,status);
 			doPostTL = true;
 	        break;
 			
@@ -664,7 +702,7 @@ int main(int argc,char *argv[])
 	        break;
 			
 		case CMDLINE_OPT::SEARCH:
-			status = optarg;
+			convargv(optarg,status);
 			doSearchTL = true;
 	        break;
 
@@ -674,16 +712,16 @@ int main(int argc,char *argv[])
 	        break;
 			
 		case CMDLINE_OPT::ID:
-			idstr = optarg;
+			convargv(optarg,idstr);
 	        break;
 
 		case CMDLINE_OPT::SCREEN:
 			setScerrnName = true;
-			screenuser = optarg;
+			convargv(optarg,screenuser);
 	        break;
 			
 		case CMDLINE_OPT::USER:
-			aries = optarg;
+			convargv(optarg,aries);
 	        break;
 			
 		case CMDLINE_OPT::VERBOSE:

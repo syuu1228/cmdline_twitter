@@ -31,7 +31,10 @@
 #if defined(__linux__) || defined(__CYGWIN__)
 //#define _BSD_SOURCE
 #include <endian.h>
-#endif
+#elif defined(__MINGW32__)
+#define htobe32(x) __builtin_bswap32 (x)
+#define htobe64(x) __builtin_bswap64 (x)
+#endif	// __MINGW32__
 
 inline uint32_t left_rotate32(uint32_t x, size_t n)
 {
