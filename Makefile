@@ -7,7 +7,6 @@ LDFLAGS   = -lcurl
 
 ifeq ($(MSYSTEM),MINGW32)
 TARGET    = ctw.exe
-LDFLAGS   += -liconv
 else
 TARGET    = ctw
 endif

@@ -62,29 +62,6 @@ static int makedir(const string &dirname,mode_t mode)
 #endif
 }
 
-// MSYSの場合、なぜかコマンドラインだけはSJISのままなのでUTF8にコンバートする
-void convargv(char *src,std::string &dest)
-{
-#if defined(__MINGW32__)
-	iconv_t ic = iconv_open("UTF-8", "SJIS");
-	char *pin=src;
-	char *pou;
-	size_t ilen = strlen(src);
-	// 半角かなの変換にUTF8は3オクテット必要
-	size_t olen = ilen*6+10;
-
-	dest.resize(olen);
-	pou = &dest[0];
-	
-	iconv(ic,&pin,&ilen,&pou,&olen);
-	*pou = '\0';
-	
-	iconv_close(ic);
-#else
-	dest = src;
-#endif
-}
-
 // アプリ設定ファイル用ディレクトリを取得＆作成
 static bool get_app_dir(string &dirname)
 {
@@ -685,7 +662,7 @@ int main(int argc,char *argv[])
 			break;
 			
 		case CMDLINE_OPT::POST:
-			convargv(optarg,status);
+			status = optarg;
 			doPostTL = true;
 	        break;
 			
@@ -702,7 +679,7 @@ int main(int argc,char *argv[])
 	        break;
 			
 		case CMDLINE_OPT::SEARCH:
-			convargv(optarg,status);
+			status = optarg;
 			doSearchTL = true;
 	        break;
 
@@ -712,16 +689,16 @@ int main(int argc,char *argv[])
 	        break;
 			
 		case CMDLINE_OPT::ID:
-			convargv(optarg,idstr);
+			idstr = optarg;
 	        break;
 
 		case CMDLINE_OPT::SCREEN:
 			setScerrnName = true;
-			convargv(optarg,screenuser);
+			screenuser = optarg;
 	        break;
 			
 		case CMDLINE_OPT::USER:
-			convargv(optarg,aries);
+			aries = optarg;
 	        break;
 			
 		case CMDLINE_OPT::VERBOSE:

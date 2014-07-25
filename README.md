@@ -28,7 +28,7 @@ $ sudo apt-get install g++ libstdc++6 libcurl4-nss-dev
 
 Windows環境(MSYS2)の場合は次のようにすると良いかもしれません
 ````
-$ pacman -S mingw-w64-i686-gcc  mingw-w64-i686-gcc-libs libcurl  libcurl-devel
+$ pacman -S gcc  gcc-libs libcurl libcurl-devel
 ````
 
 
