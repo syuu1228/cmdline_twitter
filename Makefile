@@ -5,11 +5,7 @@ STRIP     = $(CROSS_COMPILE)strip
 CFLAGS    = -Wall -O2
 LDFLAGS   = -lcurl
 
-ifeq ($(MSYSTEM),MINGW32)
-TARGET    = ctw.exe
-else
 TARGET    = ctw
-endif
 
 OBJS	  = base64.o oauth.o twitter_client.o main.o keys/apikeys.hpp
 ARLIBS    = http/httplib.a hashcodes/hashlib.a

@@ -235,8 +235,8 @@ void RequestTest(TwitterClient &client)
 // Twitterでは標準時刻(UTC)が記述されているのでこれを現地時刻に直す
 inline static void get_local_time_string(const std::string &src,std::string &dst)
 {
-#if defined(__MINGW32__)
-	// TODO: mingwにはstrptimeなどがないので今はこうしている…
+#if defined(__MSYS__)
+	// TODO: MSYS2にはstrptimeが機能していないので今はこうしている…
 	dst = src;
 #else
 	string tmstr;
