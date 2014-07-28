@@ -273,7 +273,7 @@ static void printTweet(picojson::object &tweet)
 	get_local_time_string(tweet["created_at"].to_str(),tmstr);
 	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
 	if(tweet["retweeted_status"].is<object>()){
-		// リツィートは完全な本文はretweeted_statusに含まれるそうな
+		// リツィート時の完全な本文はretweeted_statusに含まれるそうな
 		object robj = tweet["retweeted_status"].get<object>();
 		textstr = robj["text"].to_str();
 	}else{
@@ -437,12 +437,46 @@ void RemoveTimeline(TwitterClient &client,const std::string &idstr)
 void PostTimeline(TwitterClient &client,const std::string &status)
 {
 	picojson::object tweet;
-	if(! client.postStatus(status,tweet)){
+	if(! client.postStatus(status,"",tweet)){
 		putRequestError(client);
 		return;
 	}
 	printTweet(tweet);
 }
+
+// リプライする
+void ReplyTimeline(TwitterClient &client,const std::string &status,const std::string &idstr)
+{
+	picojson::object tweet;
+	
+	// @付けてるかチェックする
+	if(status.find_first_of('@') != string::npos){
+		if(! client.postStatus(status,idstr,tweet)){
+			putRequestError(client);
+			return;
+		}
+	}else{
+		// @の指定がなかった場合、IDの発言より自動的にユーザを取得する
+		picojson::object srctweet;
+		if(! client.showTweet(idstr,srctweet)){
+			putRequestError(client);
+			return;
+		}
+		if(! srctweet["user"].is<picojson::object>()){
+			// ユーザ情報なし
+			return;
+		}
+		picojson::object uobj = srctweet["user"].get<picojson::object>();	// ユーザ情報取得
+		std::string newstatus = "@" + uobj["screen_name"].to_str() + " " + status;
+		if(! client.postStatus(newstatus,idstr,tweet)){
+			putRequestError(client);
+			return;
+		}
+	}
+	
+	printTweet(tweet);
+}
+
 
 void RetweetTimeline(TwitterClient &client,const std::string &idstr)
 {
@@ -551,11 +585,14 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "-a | --auth          [再]認証を行う\n"
 	 "                     -u オプションでエイリアスを指定できます\n"
 	 "-p | --post status   タイムラインへ投稿\n"
+	 "                     -i オプションでそのIDに対してのリプライ動作\n"
+	 "                     (@は自分で付けてください。@省略時は@が自動付与されます)\n"
 	 "-s | --search word   ワードで検索\n"
 	 "-r | --readtl        ホームのタイムラインを読む\n"
 	 "                     -n オプションでユーザ名指定すると指定ユーザを読む\n"
 	 "                     -n オプションで\"\"と指定すると自分の発言を読む\n"
 	 "                     -n オプションで\"@\"と指定すると自分へのメンションを読む\n"
+	 "                     -i オプションで単発のツイートを読む\n"
 	 "-d | --del           発言の削除 -iでID指定\n"
 	 "-R | --Retweet       リツイートする -iでID指定\n"
 	 "-F | --Fav           お気に入りに追加する -iでID指定\n"
@@ -739,7 +776,11 @@ int main(int argc,char *argv[])
 	}
 	
 	if(doPostTL){
-		PostTimeline(client,status);
+		if(idstr.empty()){
+			PostTimeline(client,status);
+		}else{
+			ReplyTimeline(client,status,idstr);
+		}
 		return 0;
 	}
 	

@@ -159,7 +159,9 @@ public:
 	// Tweets:Resource
 	bool showTweet(const std::string &idstr,picojson::object &tweet);
 	bool destroyStatus(const std::string &idstr);
-	bool postStatus(const std::string &status,picojson::object &tweet);
+	bool postStatus(const std::string &status,
+					const std::string &reply_id,
+					picojson::object &tweet);
 	bool retweetStatus(const std::string &idstr);
 	
 	// Search

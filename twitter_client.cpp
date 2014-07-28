@@ -1,5 +1,5 @@
 //
-// OAUTH 1.0クライアントの実装
+// twitter クライアントの実装
 //
 // The MIT License (MIT)
 //
@@ -436,13 +436,19 @@ bool TwitterClient::destroyStatus(const std::string &idstr)
 
 
 // タイムラインへ投稿
-bool TwitterClient::postStatus(const std::string &status,picojson::object &tweet)
+bool TwitterClient::postStatus(const std::string &status,
+	const std::string &reply_id,
+	picojson::object &tweet)
 {
 	HTTPRequestData	httpdata;
 	picojson::value jsonval;
 	
 	httpdata["status"] = status;
 	httpdata[PARAM_TRIM_USER] = VALUE_FALSE;
+	if(!reply_id.empty()){
+		httpdata["in_reply_to_status_id"] = reply_id;
+	}
+	
 	
 	if(! postRequest(
 		TW_RESOURCE_STATUSES_UPDATE,
