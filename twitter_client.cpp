@@ -198,6 +198,23 @@ bool TwitterClient::getRequest(const std::string url,HTTPRequestData &hdata,pico
 	return parseJson(jsonval);
 }
 
+template<typename Tx>
+bool TwitterClient::getRequestJson(const std::string url,HTTPRequestData &hdata,Tx &rval)
+{
+	picojson::value jsonval;
+	if(! getRequest(url,hdata,jsonval)){
+		return false;
+	}
+	
+	if(! jsonval.is<Tx>()){
+		m_lasterror = "JSON error mismatch data type";
+		vprint(m_lasterror);
+		return false;
+	}
+	rval = jsonval.get<Tx>();
+	return true;
+}
+
 
 // POSTリクエストを投げる共通関数。ついでにJSON解析までやってしまう。
 bool TwitterClient::postRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval)
@@ -222,6 +239,23 @@ bool TwitterClient::postRequest(const std::string url,HTTPRequestData &hdata,pic
 	}
 	// JSONで帰ってくるので解析をする
 	return parseJson(jsonval);
+}
+
+template<typename Tx>
+bool TwitterClient::postRequestJson(const std::string url,HTTPRequestData &hdata,Tx &rval)
+{
+	picojson::value jsonval;
+	if(! postRequest(url,hdata,jsonval)){
+		return false;
+	}
+	
+	if(! jsonval.is<Tx>()){
+		m_lasterror = "JSON error mismatch data type";
+		vprint(m_lasterror);
+		return false;
+	}
+	rval = jsonval.get<Tx>();
+	return true;
 }
 
 
@@ -260,28 +294,20 @@ bool TwitterClient::getMentionsTimeline(
 	picojson::array &rtimeline)
 {
 	HTTPRequestData	httpdata;
-	picojson::value jsonval;
 	
 	httpdata[PARAM_COUNT] = tostring(count);
 	
 	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
 	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
-	
-	if(! getRequest(
+
+	if(! getRequestJson(
 		TL_RESOURCE_STATUSES_MEMTION,
 		httpdata,
-		jsonval)
+		rtimeline)
 	){
-		vprint("err getRequest");
+		vprint("err getMentionsTimeline");
 		return false;
 	}
-	// タイムライン取得は配列である
-	if(! jsonval.is<picojson::array>()){
-		m_lasterror = "JSON error is not array data";
-		vprint(m_lasterror);
-		return false;
-	}
-	rtimeline = jsonval.get<picojson::array>();
 	return true;
 }
 
@@ -295,7 +321,6 @@ bool TwitterClient::getUserTimeline(
 	picojson::array &rtimeline)
 {
 	HTTPRequestData	httpdata;
-	picojson::value jsonval;
 	
 	if(! userid.empty()){
 		httpdata[PARAM_USER_ID] = userid;
@@ -313,22 +338,14 @@ bool TwitterClient::getUserTimeline(
 	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
 	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
 	
-	
-	if(! getRequest(
+	if(! getRequestJson(
 		TL_RESOURCE_STATUSES_USERTL,
 		httpdata,
-		jsonval)
+		rtimeline)
 	){
-		vprint("err getRequest");
+		vprint("err getUserTimeline");
 		return false;
 	}
-	// タイムライン取得は配列である
-	if(! jsonval.is<picojson::array>()){
-		m_lasterror = "JSON error is not array data";
-		vprint(m_lasterror);
-		return false;
-	}	
-	rtimeline = jsonval.get<picojson::array>();
 	return true;
 }
 
@@ -358,31 +375,22 @@ bool TwitterClient::getHomeTimeline(uint16_t count,
 	picojson::array &rtimeline)
 {
 	HTTPRequestData	httpdata;
-	picojson::value jsonval;
+	
 	httpdata[PARAM_COUNT] = tostring(count);
 	httpdata[PARAM_INCLUDE_RTS]	= (include_rts		? VALUE_TRUE : VALUE_FALSE);
 	httpdata[PARAM_EXC_REPLIES]	= (include_replies	? VALUE_FALSE : VALUE_TRUE);
 	
 	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
 	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
-	
-	
-	if(! getRequest(
+
+	if(! getRequestJson(
 		TL_RESOURCE_STATUSES_HOMETL,
 		httpdata,
-		jsonval)
+		rtimeline)
 	){
-		vprint("err getRequest");
+		vprint("err getHomeTimeline");
 		return false;
 	}
-	// タイムライン取得は配列である
-	if(! jsonval.is<picojson::array>()){
-		m_lasterror = "JSON error is not array data";
-		vprint(m_lasterror);
-		return false;
-	}
-	
-	rtimeline = jsonval.get<picojson::array>();
 	return true;
 }
 
@@ -390,31 +398,24 @@ bool TwitterClient::getHomeTimeline(uint16_t count,
 bool TwitterClient::showTweet(const std::string &idstr,picojson::object &tweet)
 {
 	HTTPRequestData	httpdata;
-	picojson::value jsonval;
 
 	httpdata[PARAM_ID]				= idstr;
 	httpdata[PARAM_TRIM_USER] 		= VALUE_FALSE;
 	httpdata["include_my_retweet"] 	= VALUE_TRUE;
-	
-	if(! getRequest(
+
+	if(! getRequestJson(
 		TW_RESOURCE_STATUSES_SHOW_ID,
 		httpdata,
-		jsonval)
+		tweet)
 	){
-		vprint("err DestroyStatus");
+		vprint("err showTweet");
 		return false;
 	}
-	if(! jsonval.is<picojson::object>()){
-		m_lasterror = "JSON error is not object data";
-		vprint(m_lasterror);
-		return false;
-	}
-	tweet = jsonval.get<picojson::object>();
 	return true;
 }
 
 
-bool TwitterClient::destroyStatus(const std::string &idstr)
+bool TwitterClient::destroyStatus(const std::string &idstr,picojson::object &tweet)
 {
 	HTTPRequestData	httpdata;
 	picojson::value jsonval;
@@ -423,10 +424,10 @@ bool TwitterClient::destroyStatus(const std::string &idstr)
 	url += idstr;
 	url += JSON_ENDPOINT;
 	
-	if(! postRequest(
+	if(! postRequestJson(
 		url,
 		httpdata,
-		jsonval)
+		tweet)
 	){
 		vprint("err DestroyStatus");
 		return false;
@@ -441,7 +442,6 @@ bool TwitterClient::postStatus(const std::string &status,
 	picojson::object &tweet)
 {
 	HTTPRequestData	httpdata;
-	picojson::value jsonval;
 	
 	httpdata["status"] = status;
 	httpdata[PARAM_TRIM_USER] = VALUE_FALSE;
@@ -449,41 +449,32 @@ bool TwitterClient::postStatus(const std::string &status,
 		httpdata["in_reply_to_status_id"] = reply_id;
 	}
 	
-	
-	if(! postRequest(
+	if(! postRequestJson(
 		TW_RESOURCE_STATUSES_UPDATE,
 		httpdata,
-		jsonval)
+		tweet)
 	){
 		vprint("err putStatus");
 		return false;
 	}
-	if(! jsonval.is<picojson::object>()){
-		m_lasterror = "JSON error is not object data";
-		vprint(m_lasterror);
-		return false;
-	}
-	tweet = jsonval.get<picojson::object>();
-	
 	return true;
 }
 
 // リツイートする
-bool TwitterClient::retweetStatus(const std::string &idstr)
+bool TwitterClient::retweetStatus(const std::string &idstr,picojson::object &tweet)
 {
 	HTTPRequestData	httpdata;
-	picojson::value jsonval;
 
 	string url = TW_RESOURCE_STATUSES_RETWEET;
 	url += idstr;
 	url += JSON_ENDPOINT;
-	
-	if(! postRequest(
+
+	if(! postRequestJson(
 		url,
 		httpdata,
-		jsonval)
+		tweet)
 	){
-		vprint("err DestroyStatus");
+		vprint("err retweetStatus");
 		return false;
 	}
 	return true;
@@ -495,7 +486,6 @@ bool TwitterClient::searchTweets(const std::string &q,const std::string &lang,co
 		const std::string & since_id,const std::string & max_id,picojson::array &rtimeline)
 {
 	HTTPRequestData	httpdata;
-	picojson::value jsonval;
 	
 	httpdata[PARAM_COUNT] 	= "100";
 	httpdata["q"]			= q;
@@ -505,34 +495,31 @@ bool TwitterClient::searchTweets(const std::string &q,const std::string &lang,co
 	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
 	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
 	
-	if(! getRequest(
+	if(! getRequestJson(
 		TW_SEARCH_TWEETS,
 		httpdata,
-		jsonval)
+		rtimeline)
 	){
-		vprint("err getRequest");
+		vprint("err searchTweets");
 		return false;
 	}
-	// statusesの中に配列がある形
-	rtimeline = jsonval.get<picojson::object>()["statuses"].get<picojson::array>();
 	return true;
 }
 
 
 // お気に入りに追加する
-bool TwitterClient::createFavorites(const std::string &idstr)
+bool TwitterClient::createFavorites(const std::string &idstr,picojson::object &tweet)
 {
 	HTTPRequestData	httpdata;
-	picojson::value jsonval;
 
 	httpdata[PARAM_ID]	= idstr;
-	
-	if(! postRequest(
+
+	if(! postRequestJson(
 		TW_FABORITES_CREATE,
 		httpdata,
-		jsonval)
+		tweet)
 	){
-		vprint("err DestroyStatus");
+		vprint("err createFavorites");
 		return false;
 	}
 	return true;
@@ -560,24 +547,16 @@ bool TwitterClient::getUserList(const std::string &userid,const std::string &scr
 		// どっちかのパラメータをいれること
 		return false;
 	}
-		
-	
-	if(! getRequest(
+
+	if(! getRequestJson(
 		TW_LISTS_LIST,
 		httpdata,
-		jsonval)
+		rlists)
 	){
-		vprint("err getRequest");
+		vprint("err getUserList");
 		return false;
 	}
-	// リストは配列である
-	if(! jsonval.is<picojson::array>()){
-		m_lasterror = "JSON error is not array data";
-		vprint(m_lasterror);
-		return false;
-	}
-	rlists = jsonval.get<picojson::array>();
-	return true;	
+	return true;
 }
 
 
@@ -625,23 +604,15 @@ bool TwitterClient::getUserListTimeline(const std::string &slug,
 	
 	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
 	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
-	
-	
-	if(! getRequest(
+
+	if(! getRequestJson(
 		TW_LISTS_STATUSES,
 		httpdata,
-		jsonval)
+		rtimeline)
 	){
-		vprint("err getRequest");
+		vprint("err getUserListTimeline");
 		return false;
 	}
-	// タイムライン取得は配列である
-	if(! jsonval.is<picojson::array>()){
-		m_lasterror = "JSON error is not array data";
-		vprint(m_lasterror);
-		return false;
-	}
-	rtimeline = jsonval.get<picojson::array>();
 	return true;	
 }
 
@@ -658,23 +629,17 @@ bool TwitterClient::verifyAccount(picojson::object &userinfo,bool last_status,bo
 	httpdata["include_entities"]	= (entities ? VALUE_TRUE : VALUE_FALSE);
 	httpdata["skip_status"] 		= (last_status ? VALUE_FALSE : VALUE_TRUE);
 	
-	if(! getRequest(
+	if(! getRequestJson(
 		TW_USERS_ACCOUNT_VERIFY,
 		httpdata,
-		jsonval)
+		userinfo)
 	){
-		vprint("err getRequest");
+		vprint("err verifyAccount");
 		return false;
 	}
-	userinfo = jsonval.get<picojson::object>();
-	
 	m_user_id		= userinfo[PARAM_ID_STR].to_str();
 	m_user_name		= userinfo[PARAM_NAME].to_str();
 	m_user_screen	= userinfo[PARAM_SCREEN_NAME].to_str();
 	return true;
 }
-
-
-
-
 

@@ -425,27 +425,29 @@ void ReadTweet(TwitterClient &client,const std::string &idstr)
 }
 
 
-void RemoveTimeline(TwitterClient &client,const std::string &idstr)
+void RemoveTimeline(TwitterClient &client,const std::string &idstr,bool silent)
 {
-	if(! client.destroyStatus(idstr)){
+	picojson::object tweet;
+	if(! client.destroyStatus(idstr,tweet)){
 		putRequestError(client);
 		return;
 	}
+	if(! silent)	printTweet(tweet);
 }
 
 // 投稿する
-void PostTimeline(TwitterClient &client,const std::string &status)
+void PostTimeline(TwitterClient &client,const std::string &status,bool silent)
 {
 	picojson::object tweet;
 	if(! client.postStatus(status,"",tweet)){
 		putRequestError(client);
 		return;
 	}
-	printTweet(tweet);
+	if(! silent)	printTweet(tweet);
 }
 
 // リプライする
-void ReplyTimeline(TwitterClient &client,const std::string &status,const std::string &idstr)
+void ReplyTimeline(TwitterClient &client,const std::string &status,const std::string &idstr,bool silent)
 {
 	picojson::object tweet;
 	
@@ -474,24 +476,28 @@ void ReplyTimeline(TwitterClient &client,const std::string &status,const std::st
 		}
 	}
 	
-	printTweet(tweet);
+	if(! silent)	printTweet(tweet);
 }
 
 
-void RetweetTimeline(TwitterClient &client,const std::string &idstr)
+void RetweetTimeline(TwitterClient &client,const std::string &idstr,bool silent)
 {
-	if(! client.retweetStatus(idstr)){
+	picojson::object tweet;
+	if(! client.retweetStatus(idstr,tweet)){
 		putRequestError(client);
 		return;
 	}
+	if(! silent)	printTweet(tweet);
 }
 
-void FavoriteTimeline(TwitterClient &client,const std::string &idstr)
+void FavoriteTimeline(TwitterClient &client,const std::string &idstr,bool silent)
 {
-	if(! client.createFavorites(idstr)){
+	picojson::object tweet;
+	if(! client.createFavorites(idstr,tweet)){
 		putRequestError(client);
 		return;
 	}
+	if(! silent)	printTweet(tweet);
 }
 
 
@@ -588,6 +594,7 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "                     -i オプションでそのIDに対してのリプライ動作\n"
 	 "                     (@は自分で付けてください。@省略時は@が自動付与されます)\n"
 	 "-s | --search word   ワードで検索\n"
+	 "-S | --Silent        サイレントモード (投稿やFavなどの結果を表示しない)\n"
 	 "-r | --readtl        ホームのタイムラインを読む\n"
 	 "                     -n オプションでユーザ名指定すると指定ユーザを読む\n"
 	 "                     -n オプションで\"\"と指定すると自分の発言を読む\n"
@@ -633,6 +640,7 @@ namespace CMDLINE_OPT
 		RETWEET,
 		SCREEN,
 		SEARCH,
+		SILENT,
 		USER,
 		ID,
 		LIST,
@@ -654,6 +662,7 @@ long_options[] = {
 	{ "readtl",		no_argument,		NULL, CMDLINE_OPT::READTL		},
 	{ "Retweet",	no_argument,		NULL, CMDLINE_OPT::RETWEET		},
 	{ "search",		required_argument,	NULL, CMDLINE_OPT::SEARCH		},
+	{ "Silent",		no_argument,		NULL, CMDLINE_OPT::SILENT		},
 	{ "user",		required_argument,	NULL, CMDLINE_OPT::USER			},
 	{ "Test",		no_argument,		NULL, CMDLINE_OPT::TEST			},
 	{ "verbose",	no_argument,		NULL, CMDLINE_OPT::VERBOSE		},
@@ -673,6 +682,7 @@ int main(int argc,char *argv[])
 	bool doDeltw = false;
 	bool doList = false;
 	bool doTest = false;
+	bool doSilent = false;	
 	bool setScerrnName = false;
 	string status,aries,screenuser,idstr,listname;
 
@@ -743,6 +753,10 @@ int main(int argc,char *argv[])
 		case CMDLINE_OPT::USER:
 			aries = optarg;
 	        break;
+
+		case CMDLINE_OPT::SILENT:
+			doSilent = true;
+	        break;
 			
 		case CMDLINE_OPT::VERBOSE:
 			do_Verbose = true;
@@ -777,9 +791,9 @@ int main(int argc,char *argv[])
 	
 	if(doPostTL){
 		if(idstr.empty()){
-			PostTimeline(client,status);
+			PostTimeline(client,status,doSilent);
 		}else{
-			ReplyTimeline(client,status,idstr);
+			ReplyTimeline(client,status,idstr,doSilent);
 		}
 		return 0;
 	}
@@ -792,7 +806,7 @@ int main(int argc,char *argv[])
 			cout << "発言を消すIDを指定してください" << endl;
 			cin >> idstr;
 		}
-		RemoveTimeline(client,idstr);
+		RemoveTimeline(client,idstr,doSilent);
 		return 0;
 	}
 	if(doRetweetTL){
@@ -803,8 +817,8 @@ int main(int argc,char *argv[])
 			cout << "発言をリツイートしたいIDを指定してください" << endl;
 			cin >> idstr;
 		}
-		RetweetTimeline(client,idstr);
-		return 0;
+		RetweetTimeline(client,idstr,doSilent);
+		if(! doFavTL)	return 0;		// RtしてFavしたいこともあるので
 	}
 	
 	if(doFavTL){
@@ -815,7 +829,7 @@ int main(int argc,char *argv[])
 			cout << "発言をお気に入りに入れたいIDを指定してください" << endl;
 			cin >> idstr;
 		}
-		FavoriteTimeline(client,idstr);
+		FavoriteTimeline(client,idstr,doSilent);
 		return 0;
 	}
 	

@@ -119,7 +119,11 @@ protected:
 	std::string	m_lasterror;				// エラー用文字列
 	
 	bool getRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval);
+	template<typename Tx> bool getRequestJson(const std::string url,HTTPRequestData &hdata,Tx &rval);
+	
 	bool postRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval);
+	template<typename Tx> bool postRequestJson(const std::string url,HTTPRequestData &hdata,Tx &rval);
+	
 	
 	bool parseJson(picojson::value &jsonval);
 	
@@ -158,11 +162,11 @@ public:
 	
 	// Tweets:Resource
 	bool showTweet(const std::string &idstr,picojson::object &tweet);
-	bool destroyStatus(const std::string &idstr);
+	bool destroyStatus(const std::string &idstr,picojson::object &tweet);
 	bool postStatus(const std::string &status,
 					const std::string &reply_id,
 					picojson::object &tweet);
-	bool retweetStatus(const std::string &idstr);
+	bool retweetStatus(const std::string &idstr,picojson::object &tweet);
 	
 	// Search
 	bool searchTweets(const std::string &q,const std::string &lang,const std::string &restype,
@@ -171,7 +175,7 @@ public:
 	bool verifyAccount(picojson::object &userinfo,bool last_status=false,bool entities=false);
 	
 	// Favorites
-	bool createFavorites(const std::string &idstr);
+	bool createFavorites(const std::string &idstr,picojson::object &tweet);
 	
 	// List
 	bool getMyList(picojson::array &rlists);
