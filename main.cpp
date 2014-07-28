@@ -272,7 +272,13 @@ static void printTweet(picojson::object &tweet)
 	// 時間を直す
 	get_local_time_string(tweet["created_at"].to_str(),tmstr);
 	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
-	textstr = tweet["text"].to_str();
+	if(tweet["retweeted_status"].is<object>()){
+		// リツィートは完全な本文はretweeted_statusに含まれるそうな
+		object robj = tweet["retweeted_status"].get<object>();
+		textstr = robj["text"].to_str();
+	}else{
+		textstr = tweet["text"].to_str();
+	}
 	ReplaceString(textstr,"&lt;","<");
 	ReplaceString(textstr,"&gt;",">");
 	ReplaceString(textstr,"&amp;","&");
