@@ -54,6 +54,9 @@ namespace TwitterRest1_1
 	// Search
 	static const std::string	TW_SEARCH_TWEETS				= "https://api.twitter.com/1.1/search/tweets.json";
 	
+	// Streaming
+	static const std::string	TW_STREAMING_USER				= "https://userstream.twitter.com/1.1/user.json";
+	
 	// Users
 	static const std::string	TW_USERS_ACCOUNT_VERIFY			= "https://api.twitter.com/1.1/account/verify_credentials.json";
 	
@@ -102,10 +105,18 @@ namespace TwitterRest1_1
 	
 }; // namespace TwitterRest1_1
 
+// UserStream等から取得したデータをコールバックで受け取るためのユーザ定義関数
+typedef bool (*Func_stream_callback)(picojson::object &obj,void* userdata);
 
+typedef struct{
+	Func_stream_callback		fn;					// 呼び出されるコールバック関数
+	void*						data;				// コールバック関数の引数
+	void*						myClass;			// TwitterClient実体
+}TwitterClientStreamCbData;
 
 class TwitterClient
 {
+public:
 	
 protected:
 	HTTPCurl	m_peer;
@@ -116,6 +127,7 @@ protected:
 	std::string	m_user_screen;				// スクリーン名(@でついているあれ)
 	std::string	m_user_id;					// ユーザID
 	
+	std::string	m_bufSteam;					// StreamingAPI用取得関数
 	std::string	m_lasterror;				// エラー用文字列
 	
 	bool getRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval);
@@ -124,8 +136,20 @@ protected:
 	bool postRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval);
 	template<typename Tx> bool postRequestJson(const std::string url,HTTPRequestData &hdata,Tx &rval);
 	
+	bool getRequestRaw(const std::string url,HTTPRequestData &hdata,HTTPClient::Func_http_callback fn,void *cbdata);
+	bool postRequestRaw(const std::string url,HTTPRequestData &hdata,HTTPClient::Func_http_callback fn,void *cbdata);
+
+	bool getRequestStreaming(const std::string url,HTTPRequestData &hdata,Func_stream_callback fn,void *cbdata);
 	
 	bool parseJson(picojson::value &jsonval);
+	bool parseJson_Errors(picojson::value &jsonval);
+	bool parseJsonStreams(const std::string src,picojson::object &jobj);
+	
+	
+	// CALLBACK
+	static size_t callbk_stream_internal_entry(char* ptr,size_t size,size_t nmemb,void* userdata);
+	size_t do_internalStreamCallbk(char * ptr,size_t wsize,TwitterClientStreamCbData *udata);
+	
 	
 public:
 	TwitterClient();
@@ -192,7 +216,13 @@ public:
 						const std::string &since_id,const std::string &max_id,
 						bool include_rts,
 						picojson::array &rtimeline);
-	
+
+	// Streaming
+	bool getUserStreaming(bool all_replies,
+						bool with_following,
+						const std::string trackword,
+						Func_stream_callback fn,
+						void *cbdata);
 	
 	inline void copyAuth(TwitterClient &rhs){
 		m_auth			= rhs.m_auth;
@@ -211,6 +241,13 @@ public:
 		bool getreq,
 		picojson::value &jsonval,
 		std::string &result,
+		unsigned long &httpres
+	);
+	bool testRequestRaw(const std::string url,
+		HTTPRequestData &hdata,
+		bool getreq,
+		HTTPClient::Func_http_callback fn,
+		void *cbdata,
 		unsigned long &httpres
 	);
 	

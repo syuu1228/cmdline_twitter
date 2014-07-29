@@ -118,6 +118,29 @@ bool TwitterClient::Authentication_Finish(const std::string &pin)
 	return true;
 }
 
+// --------------------------------------------------------------------
+
+// エラーエントリがあるかどうか。ある場合はしかるべき処理をする
+bool TwitterClient::parseJson_Errors(picojson::value &jsonval)
+{
+	picojson::object errobject = jsonval.get<picojson::object>();
+	if(! errobject["errors"].is<picojson::array>()){
+		// Errorではないか、もしくはまともなJSONではなさそう…
+		return false;
+	}
+	picojson::array errinfoary = errobject["errors"].get<picojson::array>();
+	picojson::object errinfo = errinfoary[0].get<picojson::object>();
+	
+	m_lasterror = "Twitter return error \n";
+	m_lasterror += "Code: ";
+	m_lasterror += errinfo["code"].to_str();
+	m_lasterror += "\nMessage: \n";
+	m_lasterror += errinfo["message"].to_str();
+	vprint(m_lasterror);
+	return true;
+}
+
+
 // JSONの解析を実際に行う
 bool TwitterClient::parseJson(picojson::value &jsonval)
 {
@@ -138,7 +161,8 @@ bool TwitterClient::parseJson(picojson::value &jsonval)
 	// JSONで帰ってくるので解析をする
 	string json_err;
 	string responce = m_peer.getResponceString();
-		picojson::parse(jsonval,responce.begin(),responce.end(),&json_err);
+	
+	picojson::parse(jsonval,responce.begin(),responce.end(),&json_err);
 	if(!json_err.empty()){
 		m_lasterror = "[JSON] parse err!!! ";
 		m_lasterror += json_err;
@@ -148,27 +172,46 @@ bool TwitterClient::parseJson(picojson::value &jsonval)
 	}
 	if(httpcode >= 400){
 		// パラメータエラーのときはHTTPコードが400系を返す
-		picojson::object errobject = jsonval.get<picojson::object>();
-		if(! errobject["errors"].is<picojson::array>()){
+		if(! parseJson_Errors(jsonval)){
 			// まともなJSONではなさそう…
 			m_lasterror = "Twitter responce error \n";
 			m_lasterror += m_peer.getResponceString();
 			vprint(m_lasterror);
 			return false;
 		}
-		picojson::array errinfoary = errobject["errors"].get<picojson::array>();
-		picojson::object errinfo = errinfoary[0].get<picojson::object>();
-		
-		m_lasterror = "Twitter return error \n";
-		m_lasterror += "Code: ";
-		m_lasterror += errinfo["code"].to_str();
-		m_lasterror += "\nMessage: \n";
-		m_lasterror += errinfo["message"].to_str();
-		vprint(m_lasterror);
 		return false;
 	}
 	return true;
 }
+
+// JSONの解析を実際に行う(Stream API向け)
+bool TwitterClient::parseJsonStreams(const std::string src,picojson::object &jobj)
+{
+	picojson::value jsonval;
+	string json_err;
+	
+	picojson::parse(jsonval,src.begin(),src.end(),&json_err);
+	if(!json_err.empty()){
+		m_lasterror = "[JSON] parse err!!! ";
+		m_lasterror += json_err;
+		vprint(m_lasterror);
+		return false;
+	}
+	if(!jsonval.is<picojson::object>()){
+		m_lasterror = "[JSON] is not object... ";
+		m_lasterror += src;
+		vprint(m_lasterror);
+		return false;
+	}
+	// errorsエントリがあるかどうか
+	if(parseJson_Errors(jsonval)){
+		return false;
+	}
+	
+	jobj = jsonval.get<picojson::object>();
+	return true;
+}
+
 
 
 
@@ -215,6 +258,95 @@ bool TwitterClient::getRequestJson(const std::string url,HTTPRequestData &hdata,
 	return true;
 }
 
+// 自分で通信のコールバックを制御できる版、ストリーム通信などに利用する
+bool TwitterClient::getRequestRaw(const std::string url,HTTPRequestData &hdata,HTTPClient::Func_http_callback fn,void *cbdata)
+{
+	string authdata;
+	m_lasterror.clear();
+	
+	m_auth.makeResuestHeader(
+		"GET",
+		url,
+		hdata,
+		authdata
+	);
+	
+	m_peer.appendHeader(authdata);
+	if(!m_peer.getRequest(
+		url,
+		hdata,
+		fn,
+		cbdata)
+	){
+		m_lasterror = "HTTP Get request(RAW) failed";
+		vprint(m_lasterror);
+		return false;
+	}
+	// ここにきたら通信終わりかもしれない
+	return true;
+}
+
+
+// 内部コールバック用関数
+size_t TwitterClient::callbk_stream_internal_entry(char* ptr,size_t size,size_t nmemb,void* userdata)
+{
+	size_t wsize = size * nmemb;
+	if(userdata == NULL)	return 0;
+	if(wsize == 0)			return 0;
+	TwitterClientStreamCbData*	pData = reinterpret_cast<TwitterClientStreamCbData*>(userdata);
+	TwitterClient* 				pThat = reinterpret_cast<TwitterClient*>(pData->myClass);
+	return pThat->do_internalStreamCallbk(ptr,wsize,pData);
+}
+
+// perfomeから呼ばれるStramingAPI用コールバック関数。この中で受信結果を一時バッファにいれ、JSON値を引き渡す
+size_t TwitterClient::do_internalStreamCallbk(char * ptr,size_t wsize,TwitterClientStreamCbData *udata)
+{
+	size_t oldsize = m_bufSteam.size();
+	m_bufSteam.resize(m_bufSteam.size() + wsize);
+	memcpy(&m_bufSteam[oldsize],ptr,wsize);
+	
+	vprint("Streaming readed");
+	// 特に何もしなくても JSON要素は今のところ 0x0d 0x0a で区切られているので
+	// 0x0d 0x0aを探して、それごとにJSON解析を通す
+	size_t found=0;	
+	found = m_bufSteam.find("\r\n");
+	while(found != string::npos){
+		string streams = m_bufSteam.substr(0,found);
+		vprint(streams);
+		m_bufSteam.erase(0,found+2);
+		found = m_bufSteam.find("\r\n");
+		// 空の場合（よく送られてくる）は何もしない
+		if(streams.empty()) continue;
+
+		picojson::object jobj;
+		if(! parseJsonStreams(streams,jobj)){
+			return 0;
+		}
+		if(! udata->fn(jobj,udata->data)) return 0;
+	}
+	return wsize;
+}
+
+// ストリーム通信などでコールバックにJsonのオブジェクトを取得できるgetRequest
+bool TwitterClient::getRequestStreaming(const std::string url,HTTPRequestData &hdata,Func_stream_callback fn,void *cbdata)
+{
+	TwitterClientStreamCbData scb;
+
+	m_bufSteam.clear();
+	
+	scb.fn		= fn;
+	scb.data	= cbdata;
+	scb.myClass	= (void*)this;
+	
+	return getRequestRaw(
+		url,
+		hdata,
+		callbk_stream_internal_entry,
+		&scb
+	);
+}
+
+
 
 // POSTリクエストを投げる共通関数。ついでにJSON解析までやってしまう。
 bool TwitterClient::postRequest(const std::string url,HTTPRequestData &hdata,picojson::value &jsonval)
@@ -258,9 +390,41 @@ bool TwitterClient::postRequestJson(const std::string url,HTTPRequestData &hdata
 	return true;
 }
 
+// 自分で通信のコールバックを制御できる版、ストリーム通信などに利用する
+bool TwitterClient::postRequestRaw(const std::string url,HTTPRequestData &hdata,HTTPClient::Func_http_callback fn,void *cbdata)
+{
+	string authdata;
+	m_lasterror.clear();
+	
+	m_auth.makeResuestHeader(
+		"POST",
+		url,
+		hdata,
+		authdata
+	);
+	
+	m_peer.appendHeader(authdata);
+	if(!m_peer.postRequest(
+		url,
+		hdata,
+		fn,
+		cbdata)
+	){
+		m_lasterror = "HTTP Post request(RAW) failed";
+		vprint(m_lasterror);
+		return false;
+	}
+	// ここにきたら通信終わりかもしれない
+	return true;
+}
 
-bool TwitterClient::testRequest(const std::string url,HTTPRequestData &hdata,
-	bool getreq,picojson::value &jsonval,std::string &result,
+
+bool TwitterClient::testRequest(
+	const std::string url,
+	HTTPRequestData &hdata,
+	bool getreq,
+	picojson::value &jsonval,
+	std::string &result,
 	unsigned long &httpres)
 {
 	bool ret = true;
@@ -282,6 +446,38 @@ bool TwitterClient::testRequest(const std::string url,HTTPRequestData &hdata,
 		}
 	}
 	result = m_peer.getResponceString();
+	httpres = m_peer.getLastResponceCode();
+	return ret;
+}
+
+bool TwitterClient::testRequestRaw(
+	const std::string url,
+	HTTPRequestData &hdata,
+	bool getreq,
+	HTTPClient::Func_http_callback fn,
+	void *cbdata,
+	unsigned long &httpres)
+{
+	bool ret = true;
+	if(getreq){
+		if(! getRequestRaw(
+			url,
+			hdata,
+			fn,
+			cbdata)
+		){
+			ret = false;
+		}
+	}else{
+		if(! postRequestRaw(
+			url,
+			hdata,
+			fn,
+			cbdata)
+		){
+			ret = false;
+		}
+	}
 	httpres = m_peer.getLastResponceCode();
 	return ret;
 }
@@ -616,8 +812,6 @@ bool TwitterClient::getUserListTimeline(const std::string &slug,
 	return true;	
 }
 
-
-
 // 自分のユーザ情報の取得
 // last_status : 最後の発言などを含める
 // entities : ProfileのURL情報などを含める(効いてない？？)
@@ -642,4 +836,34 @@ bool TwitterClient::verifyAccount(picojson::object &userinfo,bool last_status,bo
 	m_user_screen	= userinfo[PARAM_SCREEN_NAME].to_str();
 	return true;
 }
+
+
+
+// UserStreamingの開始。切断されるまで帰ってこないので注意すること
+bool TwitterClient::getUserStreaming(
+	bool all_replies,
+	bool with_following,
+	const std::string trackword,
+	Func_stream_callback fn,
+	void *cbdata)
+{
+	HTTPRequestData	httpdata;
+	
+	if(all_replies)			httpdata["replies"]		= "all";
+	if(! trackword.empty())	httpdata["track"]		= trackword;
+	
+	httpdata["with"]			= (with_following	? "followings" : "user");
+
+	if(! getRequestStreaming(
+		TW_STREAMING_USER,
+		httpdata,
+		fn,
+		cbdata)
+	){
+		vprint("err getUserStreaming");
+		return false;
+	}
+	return true;
+}
+
 

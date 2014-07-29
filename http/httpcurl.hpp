@@ -52,17 +52,17 @@ public:
 	virtual ~HTTPCurl();
 	
 	virtual bool isInit();
-	virtual bool Open(const std::string &url);
+	virtual bool Open(const std::string &url,Func_http_callback callbk,void* udata);
 	
 	virtual void appendHeader(const std::string &header);
 	virtual void cleanHeader();
 	
 	using HTTPClient::getRequest;
-	virtual bool getRequest(const std::string &url,const std::string &data);
+	virtual bool getRequest(const std::string &url,const std::string &data,Func_http_callback callbk=NULL,void* udata=NULL);
 	using HTTPClient::postRequest;
-	virtual bool postRequest(const std::string &url,const std::string &data);
+	virtual bool postRequest(const std::string &url,const std::string &data,Func_http_callback callbk=NULL,void* udata=NULL);
 	using HTTPClient::customRequest;
-	virtual bool customRequest(const std::string &url,const std::string &data,const std::string &req);
+	virtual bool customRequest(const std::string &url,const std::string &data,const std::string &req,Func_http_callback callbk=NULL,void* udata=NULL);
 };
 
 

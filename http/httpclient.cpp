@@ -82,26 +82,30 @@ size_t HTTPClient::buildRequestData(HTTPRequestData &data,std::string &rstr)
 //
 // url    : 開くURL
 // data   : 渡すデータ。keyとValueは勝手に構築される。Valueはエンコードされる
+// callbk : リクエストを受けたときのユーザ定義のコールバック関数(NULLでもよい)
+// udata  : コールバック関数の引数
 // return
 //   falseなら接続関連のエラー	
-bool HTTPClient::getRequest(const std::string &url,HTTPRequestData &data)
+bool HTTPClient::getRequest(const std::string &url,HTTPRequestData &data,Func_http_callback callbk,void* udata)
 {
 	string strdata;
 	buildRequestData(data,strdata);
-	return getRequest(url,strdata);
+	return getRequest(url,strdata,callbk,udata);
 }
 
 // Postリクエストを送る
 //
 // url    : 開くURL
 // data   : 渡すデータ。keyとValueは勝手に構築される。Valueはエンコードされる
+// callbk : リクエストを受けたときのユーザ定義のコールバック関数(NULLでもよい)
+// udata  : コールバック関数の引数
 // return
 //   falseなら接続関連のエラー	
-bool HTTPClient::postRequest(const std::string &url,HTTPRequestData &data)
+bool HTTPClient::postRequest(const std::string &url,HTTPRequestData &data,Func_http_callback callbk,void* udata)
 {
 	string strdata;
 	buildRequestData(data,strdata);
-	return postRequest(url,strdata);
+	return postRequest(url,strdata,callbk,udata);
 }
 
 // カスタムリクエストを送る
@@ -109,13 +113,15 @@ bool HTTPClient::postRequest(const std::string &url,HTTPRequestData &data)
 // url    : 開くURL
 // data   : 渡すデータ。keyとValueは勝手に構築される。Valueはエンコードされる
 // req    : リクエスト名
+// callbk : リクエストを受けたときのユーザ定義のコールバック関数(NULLでもよい)
+// udata  : コールバック関数の引数
 // return
 //   falseなら接続関連のエラー	
-bool HTTPClient::customRequest(const std::string &url,HTTPRequestData &data,const std::string &req)
+bool HTTPClient::customRequest(const std::string &url,HTTPRequestData &data,const std::string &req,Func_http_callback callbk,void* udata)
 {
 	string strdata;
 	buildRequestData(data,strdata);
-	return customRequest(url,strdata,req);
+	return customRequest(url,strdata,req,callbk,udata);
 }
 
 

@@ -35,8 +35,13 @@
 typedef std::map<std::string,std::string>	HTTPRequestData;
 
 
+
 class HTTPClient
 {
+public:
+	// HTTPから取得したデータをコールバックで受け取るためのユーザ定義関数
+	typedef size_t (*Func_http_callback)(char* ptr,size_t size,size_t nmemb,void* userdata);
+
 protected:
 	std::vector<uint8_t>	m_responce;					// レスポンスデータ
 	bool					m_berror;					// エラー時はtrue
@@ -48,6 +53,8 @@ protected:
 	std::string				m_proxypass;				// Proxyのパスワード
 	long int				m_proxyport;				// Proxyのポート番号
 
+	bool					m_encording_gzip;			// EncordingにGzipを使うかどうか
+	
 	virtual bool init()=0;
 	virtual void cleanup()=0;
 
@@ -59,17 +66,17 @@ public:
 	virtual void appendHeader(const std::string &header)=0;
 	virtual void cleanHeader()=0;
 
-	virtual bool Open(const std::string &url)=0;
+	virtual bool Open(const std::string &url,Func_http_callback callbk,void* udata)=0;
 	
 	static size_t buildRequestData(HTTPRequestData &data,std::string &rstr);
-	virtual bool getRequest(const std::string &url,const std::string &data)=0;
-	virtual bool getRequest(const std::string &url,HTTPRequestData &data);
+	virtual bool getRequest(const std::string &url,const std::string &data,Func_http_callback callbk=NULL,void* udata=NULL)=0;
+	virtual bool getRequest(const std::string &url,HTTPRequestData &data,Func_http_callback callbk=NULL,void* udata=NULL);
 
-	virtual bool postRequest(const std::string &url,const std::string &data)=0;
-	virtual bool postRequest(const std::string &url,HTTPRequestData &data);
+	virtual bool postRequest(const std::string &url,const std::string &data,Func_http_callback callbk=NULL,void* udata=NULL)=0;
+	virtual bool postRequest(const std::string &url,HTTPRequestData &data,Func_http_callback callbk=NULL,void* udata=NULL);
 	
-	virtual bool customRequest(const std::string &url,const std::string &data,const std::string &req)=0;
-	virtual bool customRequest(const std::string &url,HTTPRequestData &data,const std::string &req);
+	virtual bool customRequest(const std::string &url,const std::string &data,const std::string &req,Func_http_callback callbk=NULL,void* udata=NULL)=0;
+	virtual bool customRequest(const std::string &url,HTTPRequestData &data,const std::string &req,Func_http_callback callbk=NULL,void* udata=NULL);
 	
 	
 	inline bool isError()
@@ -110,6 +117,12 @@ public:
 		m_proxyport = port;
 	}
 	
+	inline void setEncordingGZip(bool used){
+		m_encording_gzip = used;
+	}
+	inline bool getEncordingGZip(){
+		return m_encording_gzip;
+	}
 };
 
 extern "C" {

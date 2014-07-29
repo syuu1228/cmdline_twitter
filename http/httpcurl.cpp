@@ -49,6 +49,7 @@ HTTPCurl::HTTPCurl()
 	init();
 	m_proxyport = 0;
 	m_respcode = 0;
+	m_encording_gzip = false;
 }
 
 HTTPCurl::~HTTPCurl()
@@ -77,7 +78,7 @@ size_t HTTPCurl::do_internalCallbk(char * ptr,size_t size,size_t nmemb)
 	// TODO: もっときれいな方法があれば…
 	m_responce.resize(m_responce.size() + wsize);
 	memcpy(&m_responce[oldsize],ptr,wsize);
-	return size*nmemb;
+	return wsize;
 }
 
 // 初期化を行う
@@ -99,9 +100,6 @@ bool HTTPCurl::init()
 
 	// コールバック系をこの段階でセット
 	curl_easy_setopt(m_curl,CURLOPT_ERRORBUFFER,error_buffer);
-    curl_easy_setopt(m_curl,CURLOPT_WRITEFUNCTION,callbk_internal_entry);
-    curl_easy_setopt(m_curl,CURLOPT_WRITEDATA,this);
-	
 	return true;
 }
 
@@ -173,7 +171,7 @@ void HTTPCurl::setInternalProxy()
 // url    : 開くURL
 // return
 //   falseなら接続関連のエラー
-bool HTTPCurl::Open(const std::string &url)
+bool HTTPCurl::Open(const std::string &url,Func_http_callback callbk,void* udata)
 {
 	if(! isInit())	return false;
 	setError(false);
@@ -181,6 +179,18 @@ bool HTTPCurl::Open(const std::string &url)
 	// 前準備をここでやる
 	setInternalProxy();
 	cleanResponce();
+	
+	// コールバック関数をセット
+	if(callbk == NULL){
+	    curl_easy_setopt(m_curl,CURLOPT_WRITEFUNCTION,callbk_internal_entry);
+		curl_easy_setopt(m_curl,CURLOPT_WRITEDATA,this);
+	}else{
+	    curl_easy_setopt(m_curl,CURLOPT_WRITEFUNCTION,callbk);
+		curl_easy_setopt(m_curl,CURLOPT_WRITEDATA,udata);
+	}
+	// ACCEPT_ENCODINGの設定
+	// この辺はcURLにお任せする。普通だとinfrate,gzipになってるはず
+	curl_easy_setopt(m_curl, CURLOPT_ACCEPT_ENCODING, "");
 	// ヘッダを実際にセット
 	if(m_curl_header != NULL){
 		 curl_easy_setopt(m_curl,CURLOPT_HTTPHEADER,m_curl_header);
@@ -188,6 +198,10 @@ bool HTTPCurl::Open(const std::string &url)
 	
 	curl_easy_setopt(m_curl,CURLOPT_URL,url.c_str());
 	// いよいよ開く
+#ifdef _DEBUG	
+	curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
+#endif
+	
 	dprint("open URL %s ...\n",url.c_str());	
 	if(curl_easy_perform(m_curl) != CURLE_OK){
 		// 接続などに失敗
@@ -211,7 +225,7 @@ bool HTTPCurl::Open(const std::string &url)
 // data   : 渡すデータ。エンコードされない
 // return
 //   falseなら接続関連のエラー	
-bool HTTPCurl::getRequest(const std::string &url,const std::string &data)
+bool HTTPCurl::getRequest(const std::string &url,const std::string &data,Func_http_callback callbk,void* udata)
 {
 	string xurl=url;
 	if(! data.empty()){
@@ -219,7 +233,7 @@ bool HTTPCurl::getRequest(const std::string &url,const std::string &data)
 		xurl += data;
 	}
 	curl_easy_setopt(m_curl,CURLOPT_HTTPGET,1);
-	return Open(xurl);
+	return Open(xurl,callbk,udata);
 	
 }
 
@@ -230,7 +244,7 @@ bool HTTPCurl::getRequest(const std::string &url,const std::string &data)
 // data   : POSTするデータ(key=val&key2=val...形式)
 // return
 //   falseなら接続関連のエラー	
-bool HTTPCurl::postRequest(const std::string &url,const std::string &data)
+bool HTTPCurl::postRequest(const std::string &url,const std::string &data,Func_http_callback callbk,void* udata)
 {
 	curl_easy_setopt(m_curl,CURLOPT_HTTPPOST,1);
 	if(! data.empty()){
@@ -239,7 +253,7 @@ bool HTTPCurl::postRequest(const std::string &url,const std::string &data)
 		// POSTがNULLだとSEGFAULTが起こる、、とりあえず空文字をセットしておく
 		curl_easy_setopt(m_curl,CURLOPT_COPYPOSTFIELDS,"");		
 	}
-	return Open(url);
+	return Open(url,callbk,udata);
 }
 
 // カスタムリクエストを送る
@@ -249,7 +263,7 @@ bool HTTPCurl::postRequest(const std::string &url,const std::string &data)
 // req    : リクエスト名
 // return
 //   falseなら接続関連のエラー	
-bool HTTPCurl::customRequest(const std::string &url,const std::string &data,const std::string &req)
+bool HTTPCurl::customRequest(const std::string &url,const std::string &data,const std::string &req,Func_http_callback callbk,void* udata)
 {
 	curl_easy_setopt(m_curl,CURLOPT_CUSTOMREQUEST,req.c_str());
 	if(! data.empty()){
@@ -258,7 +272,7 @@ bool HTTPCurl::customRequest(const std::string &url,const std::string &data,cons
 		// 多分やらないと不味いと思う
 		curl_easy_setopt(m_curl,CURLOPT_COPYPOSTFIELDS,"");		
 	}
-	return Open(url);
+	return Open(url,callbk,udata);
 }
 
 

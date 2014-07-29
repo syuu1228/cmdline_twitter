@@ -178,9 +178,19 @@ void putRequestError(TwitterClient &client)
 	cout << client.getLastErrorMessage() << endl;
 }
 
+// 内部コールバック用関数
+static size_t request_test_callbk(char* ptr,size_t size,size_t nmemb,void* userdata)
+{
+	if(size == 0)		return 0;
+	
+	size_t wsize = size*nmemb;
+	cout << "read data size " << wsize <<endl;
+	cout << ptr << endl;
+	
+	return wsize;
+}
 
-
-void RequestTest(TwitterClient &client)
+void RequestTest(TwitterClient &client,bool streamapi)
 {
 	string url;
 	string responce;
@@ -190,7 +200,9 @@ void RequestTest(TwitterClient &client)
 	int getpost;
 	bool bget=false;
 	unsigned long rescode=0;
-	
+	if(streamapi){
+		cout << "!!! Streaming APIモードです !!!" << endl;
+	}
 	cout << "APIのURLを指定してください" << endl;
 	cin >> url;
 	
@@ -212,22 +224,41 @@ void RequestTest(TwitterClient &client)
 		httpdata[param] = value;
 		cout << param << ":" << value << endl;
 	}
+	cout << "リクエストを送信しています..." << endl;
 	
-	if(! client.testRequest(
-		url,
-		httpdata,
-		bget,
-		jsonval,
-		responce,
-		rescode)
-	){
-		putRequestError(client);
+	if(! streamapi){
+		// REST版
+		if(! client.testRequest(
+			url,
+			httpdata,
+			bget,
+			jsonval,
+			responce,
+			rescode)
+		){
+			putRequestError(client);
+		}
+		cout << "\n" << endl;
+		cout << "\nHTTP Responce Data" << endl;	
+		cout << responce << endl;
+		cout << "\nHTTP Responce Code" << endl;	
+		cout << rescode << endl;
+	}else{
+		// Stream版
+		if(! client.testRequestRaw(
+			url,
+			httpdata,
+			bget,
+			request_test_callbk,
+			NULL,
+			rescode)
+		){
+			putRequestError(client);
+		}
+		cout << "\n" << endl;
+		cout << "\nHTTP Responce Code" << endl;	
+		cout << rescode << endl;
 	}
-	cout << "\n" << endl;
-	cout << "\nHTTP Responce Data" << endl;	
-	cout << responce << endl;
-	cout << "\nHTTP Responce Code" << endl;	
-	cout << rescode << endl;
 	
 }
 
@@ -579,6 +610,76 @@ void SearchTimeline(TwitterClient &client,const std::string &ques)
 }
 
 
+
+// ユーザストリーム用コールバック関数。ユーザストリームからデータが来るごとに呼び出される
+bool UserStreamCallback(picojson::object &jobj,void* userdata)
+{
+	if(! jobj["text"].is<picojson::null>()){
+		printTweet(jobj);
+		return true;
+	}
+	if(! jobj["friends"].is<picojson::null>()){
+		cout << "get friends object " << endl;
+		return true;
+	}
+	if(! jobj["friends_str"].is<picojson::null>()){
+		cout << "get friends_str object " << endl;
+		return true;
+	}
+	if(! jobj["event"].is<picojson::null>()){
+		cout << "get event object " << endl;
+		return true;
+	}
+	if(! jobj["delete"].is<picojson::null>()){
+		cout << "get delete object " << endl;
+		return true;
+	}
+	if(! jobj["scrub_geo"].is<picojson::null>()){
+		cout << "get scrub_geo object " << endl;
+		return true;
+	}
+	if(! jobj["limit"].is<picojson::null>()){
+		cout << "get limit object " << endl;
+		return true;
+	}
+	if(! jobj["status_withheld"].is<picojson::null>()){
+		cout << "get status_withheld object " << endl;
+		return true;
+	}
+	if(! jobj["user_withheld"].is<picojson::null>()){
+		cout << "get user_withheld object " << endl;
+		return true;
+	}
+	if(! jobj["disconnect"].is<picojson::null>()){
+		cout << "get disconnect object " << endl;
+		return true;
+	}
+	if(! jobj["warning"].is<picojson::null>()){
+		cout << "get warning object " << endl;
+		return true;
+	}
+	cout << "get ??? object " << endl;
+	
+	return true;
+}
+
+// UserStreamを使ってタイムラインを取得する
+static void ReadUserStream(TwitterClient &client,const std::string &trackword)
+{
+	if(! client.getUserStreaming(
+			false,				// リプライはユーザに関連するもののみ
+			true,				// ユーザとフォローに関連するもののみ
+			trackword,
+			UserStreamCallback,
+			NULL)
+	){
+		putRequestError(client);
+		return;	
+	}
+}
+
+
+
 static void usage(FILE *fp, int argc, char **argv)
 {
 	fprintf(fp,
@@ -596,6 +697,7 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "-s | --search word   ワードで検索\n"
 	 "-S | --Silent        サイレントモード (投稿やFavなどの結果を表示しない)\n"
 	 "-r | --readtl        ホームのタイムラインを読む\n"
+	 "                     -x オプションでUserStreamを使って読む(以後のオプションは無視)\n"
 	 "                     -n オプションでユーザ名指定すると指定ユーザを読む\n"
 	 "                     -n オプションで\"\"と指定すると自分の発言を読む\n"
 	 "                     -n オプションで\"@\"と指定すると自分へのメンションを読む\n"
@@ -608,7 +710,9 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "-n | --name          指定が必要な場合のユーザスクリーンネーム\n"
 	 "-i | --id            指定が必要な場合の発言ID\n"
 	 "-u | --user alies    エイリアス名指定:省略可(-a とも併用可能)\n"
+	 "-x | --xstream       Streaming APIを使う(使用可能な場合)\n"
 	 "-T | --Test          (テスト用)APIのエンドポイントを指定してAPIリクエストを行う\n"
+	 "                     -x オプションでStreaming向け接続を行う\n"
 	 "-v | --verbose       (デバッグ用)余計な文字を出力しまくる\n"
 	 "\n"
 	 "-u で指定できるエイリアス名は別アカウントで使いたい場合に便利です\n"
@@ -644,6 +748,7 @@ namespace CMDLINE_OPT
 		USER,
 		ID,
 		LIST,
+		STREAMAPI,
 		TEST,
 		VERBOSE,
 	};
@@ -664,6 +769,7 @@ long_options[] = {
 	{ "search",		required_argument,	NULL, CMDLINE_OPT::SEARCH		},
 	{ "Silent",		no_argument,		NULL, CMDLINE_OPT::SILENT		},
 	{ "user",		required_argument,	NULL, CMDLINE_OPT::USER			},
+	{ "xstream",	no_argument,		NULL, CMDLINE_OPT::STREAMAPI	},
 	{ "Test",		no_argument,		NULL, CMDLINE_OPT::TEST			},
 	{ "verbose",	no_argument,		NULL, CMDLINE_OPT::VERBOSE		},
 	{ 0, 0, 0, 0 }
@@ -683,6 +789,7 @@ int main(int argc,char *argv[])
 	bool doList = false;
 	bool doTest = false;
 	bool doSilent = false;	
+	bool useStreamAPI = false;	
 	bool setScerrnName = false;
 	string status,aries,screenuser,idstr,listname;
 
@@ -758,6 +865,10 @@ int main(int argc,char *argv[])
 			doSilent = true;
 	        break;
 			
+		case CMDLINE_OPT::STREAMAPI:
+			useStreamAPI = true;
+	        break;
+			
 		case CMDLINE_OPT::VERBOSE:
 			do_Verbose = true;
 	        break;
@@ -785,7 +896,7 @@ int main(int argc,char *argv[])
 	// とりあえず自分自身の情報を取得
 	initUserInfo(client);
 	if(doTest){
-		RequestTest(client);
+		RequestTest(client,useStreamAPI);
 		return 0;
 	}
 	
@@ -851,7 +962,9 @@ int main(int argc,char *argv[])
 	
 	
 	if(doReadTL){
-		if(! idstr.empty()){
+		if(useStreamAPI){
+			ReadUserStream(client,"");
+		}else if(! idstr.empty()){
 			// IDに何か指定されている場合は対象のIDを表示
 			ReadTweet(client,idstr);
 		}else if((!setScerrnName) && (screenuser.empty())){
