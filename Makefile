@@ -10,6 +10,14 @@ TARGET    = ctw
 OBJS	  = base64.o oauth.o twitter_client.o main.o keys/apikeys.hpp
 ARLIBS    = http/httplib.a hashcodes/hashlib.a
 
+ifndef CONSUMER_KEY
+$(error CONSUMER_KEY can not find from enviroment! you must define CONSUMER_KEY)
+endif
+ifndef CONSUMER_SECRET
+$(error CONSUMER_SECRET can not find from enviroment! you must define CONSUMER_SECRET)
+endif
+
+
 all: hashlib httplib $(TARGET)
 
 clean: 
