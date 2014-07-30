@@ -145,8 +145,6 @@ bool TwitterClient::parseJson_Errors(picojson::value &jsonval)
 bool TwitterClient::parseJson(picojson::value &jsonval)
 {
 	unsigned long httpcode = m_peer.getLastResponceCode();
-	// Verbose時はここで受けたデータを表示
-	vprint(m_peer.getResponceString());	
 
 	// 5xx系のエラーの場合はたぶん落ちてるとかそんなのなのでまともな
 	// JSONを期待してはいけない。ここはエラーとしてJSON解析はしない
@@ -170,6 +168,9 @@ bool TwitterClient::parseJson(picojson::value &jsonval)
 		vprint(m_lasterror);
 		return false;
 	}
+	// ここまできたらたぶんJSON解析成功なのでJSONのみを出す
+	if(isVerbose()) vprint(jsonval.serialize(true));
+	
 	if(httpcode >= 400){
 		// パラメータエラーのときはHTTPコードが400系を返す
 		if(! parseJson_Errors(jsonval)){
@@ -197,6 +198,9 @@ bool TwitterClient::parseJsonStreams(const std::string src,picojson::object &job
 		vprint(m_lasterror);
 		return false;
 	}
+	// ここまできたらたぶんJSON解析成功なのでJSONのみを出す
+	if(isVerbose()) vprint(jsonval.serialize(true));
+	
 	if(!jsonval.is<picojson::object>()){
 		m_lasterror = "[JSON] is not object... ";
 		m_lasterror += src;
@@ -312,7 +316,7 @@ size_t TwitterClient::do_internalStreamCallbk(char * ptr,size_t wsize,TwitterCli
 	found = m_bufSteam.find("\r\n");
 	while(found != string::npos){
 		string streams = m_bufSteam.substr(0,found);
-		vprint(streams);
+//		vprint(streams);
 		m_bufSteam.erase(0,found+2);
 		found = m_bufSteam.find("\r\n");
 		// 空の場合（よく送られてくる）は何もしない
