@@ -1,6 +1,7 @@
 setkey.sh
 ctw
 keys/apikeys.hpp
+*.d
 # Compiled Object files
 *.slo
 *.lo

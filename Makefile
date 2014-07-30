@@ -7,8 +7,12 @@ LDFLAGS   = -lcurl
 
 TARGET    = ctw
 
-OBJS	  = base64.o oauth.o twitter_client.o main.o keys/apikeys.hpp
-ARLIBS    = http/httplib.a hashcodes/hashlib.a
+HASH_SRCS = hashcodes/crypto_hash.cpp hashcodes/sha1.cpp hashcodes/md5.cpp
+HTTP_SRCS = http/httpclient.cpp http/httpcurl.cpp
+SRCS	  = base64.cpp oauth.cpp twitter_client.cpp main.cpp
+OBJS	  = $(HASH_SRCS:%.cpp=%.o) $(HTTP_SRCS:%.cpp=%.o) $(SRCS:%.cpp=%.o)
+DEPS	  = $(HASH_SRCS:%.cpp=%.d) $(HTTP_SRCS:%.cpp=%.d) $(SRCS:%.cpp=%.d)
+KEYS	  = keys/apikeys.hpp
 
 ifndef CONSUMER_KEY
 $(error CONSUMER_KEY can not find from enviroment! you must define CONSUMER_KEY)
@@ -18,32 +22,19 @@ $(error CONSUMER_SECRET can not find from enviroment! you must define CONSUMER_S
 endif
 
 
-all: hashlib httplib $(TARGET)
+all: $(TARGET)
 
 clean: 
-	rm -f *.o $(TARGET) *~ *.scc *.vcproj *.vspscc  keys/apikeys.hpp
-	-@ cd http;	make clean
-	-@ cd hashcodes;	make clean
+	rm -f $(OBJS) $(DEPS) $(TARGET) *~ *.scc *.vcproj *.vspscc $(KEYS)
 
-keys/apikeys.hpp:
+$(KEYS):
 	-@ ./write_apikeys.sh
 
-
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(DEBUGS) -o $@ $(OBJS) $(ARLIBS) $(LDFLAGS)
+$(TARGET): $(KEYS) $(OBJS) 
+	$(CC) $(CFLAGS) $(DEBUGS) -o $@ $^ $(LDFLAGS)
 	$(STRIP) $@
 
-httplib:
-	-@ cd http;	make 
-
-hashlib:
-	-@ cd hashcodes;	make 
 
 .cpp.o:
-	$(CC) -c $(CFLAGS) $(DEBUGS) $<
-
-base64.o: base64.cpp base64.hpp 
-oauth.o: oauth.cpp oauth.hpp $(ARLIBS)
-twitter_client.o: twitter_client.cpp twitter_client.hpp oauth.hpp picojson.h $(ARLIBS)
-main.o: main.cpp $(ARLIBS) twitter_client.hpp keys/apikeys.hpp
+	$(CC) -c -MMD -MP -o $@ $(CFLAGS) $(DEBUGS) $<
 
