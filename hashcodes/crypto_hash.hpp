@@ -30,7 +30,7 @@
 
 
 #include <string>
-#include "../include/typedef.hpp"
+#include "typedef.hpp"
 
 
 class crypto_hash

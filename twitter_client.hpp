@@ -27,7 +27,7 @@
 //
 
 #include "oauth.hpp"
-#include "http/httpcurl.hpp"
+#include "httpcurl.hpp"
 #include "picojson.h"
 
 

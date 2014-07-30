@@ -26,7 +26,7 @@
 // THE SOFTWARE.
 //
 
-#include "../include/typedef.hpp"
+#include "typedef.hpp"
 
 #if defined(__linux__) || defined(__CYGWIN__) || defined(__MSYS__)
 //#define _BSD_SOURCE

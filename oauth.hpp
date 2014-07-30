@@ -26,9 +26,9 @@
 // THE SOFTWARE.
 //
 
-#include "include/typedef.hpp"
-#include "http/httpclient.hpp"
-#include "hashcodes/hmac.hpp"
+#include "typedef.hpp"
+#include "httpclient.hpp"
+#include "hmac.hpp"
 
 
 typedef std::map<std::string,std::string> OAuthArgMap;

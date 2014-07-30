@@ -26,7 +26,7 @@
 // THE SOFTWARE.
 //
 
-#include "include/typedef.hpp"
+#include "typedef.hpp"
 #include <string>
 
 class base64

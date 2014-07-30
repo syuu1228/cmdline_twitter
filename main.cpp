@@ -33,7 +33,7 @@
 #include <string>
 #include <getopt.h>
 
-#include "include/typedef.hpp"
+#include "typedef.hpp"
 #include "twitter_client.hpp"
 #include "keys/apikeys.hpp"
 
