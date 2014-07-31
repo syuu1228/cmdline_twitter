@@ -57,6 +57,15 @@ namespace TwitterRest1_1
 	// Streaming
 	static const std::string	TW_STREAMING_USER				= "https://userstream.twitter.com/1.1/user.json";
 	
+	// Direct Message
+	static const std::string	TW_DIRECT_GET				= "https://api.twitter.com/1.1/direct_messages.json";
+	static const std::string	TW_DIRECT_SENT				= "https://api.twitter.com/1.1/direct_messages/sent.json";
+	static const std::string	TW_DIRECT_SHOW				= "https://api.twitter.com/1.1/direct_messages/show.json";
+	static const std::string	TW_DIRECT_DESTROY			= "https://api.twitter.com/1.1/direct_messages/destroy.json";
+	static const std::string	TW_DIRECT_NEW				= "https://api.twitter.com/1.1/direct_messages/new.json";
+	
+	
+	
 	// Users
 	static const std::string	TW_USERS_ACCOUNT_VERIFY			= "https://api.twitter.com/1.1/account/verify_credentials.json";
 	
@@ -91,6 +100,8 @@ namespace TwitterRest1_1
 	static const std::string	PARAM_OWNER_ID					= "owner_id";
 	static const std::string	PARAM_OWMER_SCREEN_NAME			= "owner_screen_name";
 	static const std::string	PARAM_TRIM_USER					= "trim_user";
+	static const std::string	PARAM_INCLUDE_ENTITIES			= "include_entities";
+	static const std::string	PARAM_SKIP_STATUS				= "skip_status";
 	
 	
 	static const std::string	VALUE_TRUE						= "true";
@@ -201,6 +212,22 @@ public:
 	// Favorites
 	bool createFavorites(const std::string &idstr,picojson::object &tweet);
 	
+	// Direct Message
+	bool getDirectMessage(uint16_t count,
+						const std::string &since_id,const std::string &max_id,
+						picojson::array &rtimeline);
+	bool getDirectPosting(uint16_t count,
+						const std::string &since_id,const std::string &max_id,
+						picojson::array &rtimeline);
+	bool postDirectMessage(
+						const std::string &userid,const std::string &screenname,	
+						const std::string &text,
+						picojson::object &tweet);
+	bool removeDirectMessage(
+						const std::string &idstr,
+						picojson::object &tweet);
+	
+	
 	// List
 	bool getMyList(picojson::array &rlists);
 	bool getUserList(const std::string &userid,const std::string &screenname,picojson::array &rlists);
@@ -223,6 +250,7 @@ public:
 						const std::string trackword,
 						Func_stream_callback fn,
 						void *cbdata);
+	
 	
 	inline void copyAuth(TwitterClient &rhs){
 		m_auth			= rhs.m_auth;

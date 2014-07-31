@@ -322,6 +322,42 @@ static void printTweet(picojson::object &tweet)
 	cout << "\033[0m";
 }
 
+static void printDM(picojson::object &tweet)
+{
+	using namespace picojson;
+	using namespace std;
+	string tmstr,textstr;
+	
+	if(! tweet["sender"].is<object>()){
+		// Sender情報なし
+		return;
+	}
+	if(! tweet["recipient"].is<object>()){
+		// recipient情報なし
+		return;
+	}
+	object sender	= tweet["sender"].get<object>();	// DMを送ったユーザ情報取得
+	object receiver	= tweet["recipient"].get<object>();	// DMを受け取ったユーザ情報取得
+	// 時間を直す
+	get_local_time_string(tweet["created_at"].to_str(),tmstr);
+	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
+	textstr = tweet["text"].to_str();
+	ReplaceString(textstr,"&lt;","<");
+	ReplaceString(textstr,"&gt;",">");
+	ReplaceString(textstr,"&amp;","&");
+	// 実際に出力
+	cout << "\033[32m";
+	cout << "Fm: " << sender["name"].to_str() << " @" << sender["screen_name"].to_str() << " " 
+		 << tweet["id_str"].to_str() << " " << tmstr << endl;
+	cout << "To: "<< receiver["name"].to_str() << " @" << receiver["screen_name"].to_str() << endl;
+	
+	cout << "\033[37m";
+	cout << textstr << endl;
+	cout << "\033[0m";
+}
+
+
+
 // タイムラインを実際に出力する。検索結果表示やらHOME表示やらに使ってる
 static void printTimeline(picojson::array &timeline)
 {
@@ -339,6 +375,23 @@ static void printTimeline(picojson::array &timeline)
 //	cout << "\033[0m";
 }
 
+
+// DMを実際に出力する。検索結果表示やらHOME表示やらに使ってる
+static void printDMline(picojson::array &timeline)
+{
+	using namespace picojson;
+	using namespace std;
+
+	// Twitterからの戻りは先が最新なので、逆順に表示
+	array::reverse_iterator it;
+	
+	for(it=timeline.rbegin();it!=timeline.rend();it++){
+		if(! it->is<object>()) continue;
+		object obj = it->get<object>();
+		printDM(obj);
+	}
+//	cout << "\033[0m";
+}
 
 
 static void printList(picojson::array &lists)
@@ -532,6 +585,65 @@ void FavoriteTimeline(TwitterClient &client,const std::string &idstr,bool silent
 }
 
 
+void ReadDirectMessaeg(TwitterClient &client)
+{
+	picojson::array timeline;
+	if(! client.getDirectMessage(
+		200,
+		"",
+		"",
+		timeline)
+	){
+		putRequestError(client);
+		return;
+	}
+	printDMline(timeline);
+}
+
+void ReadDirectPost(TwitterClient &client)
+{
+	picojson::array timeline;
+	if(! client.getDirectPosting(
+		200,
+		"",
+		"",
+		timeline)
+	){
+		putRequestError(client);
+		return;
+	}
+	printDMline(timeline);
+}
+
+void PostDirectMessage(TwitterClient &client,const std::string &sname,const std::string &text,bool silent)
+{
+	picojson::object tweet;
+	if(! client.postDirectMessage(
+		"",
+		sname,
+		text,
+		tweet)
+	){
+		putRequestError(client);
+		return;
+	}
+	if(! silent) printDM(tweet);
+}
+
+void RemoveDirectMessage(TwitterClient &client,const std::string &idstr,bool silent)
+{
+	picojson::object tweet;
+	if(! client.removeDirectMessage(
+		idstr,
+		tweet)
+	){
+		putRequestError(client);
+		return;
+	}
+	if(! silent) printDM(tweet);
+}
+
+
 void PutUserLists(TwitterClient &client,const std::string &name)
 {
 	picojson::array lists;
@@ -691,6 +803,11 @@ static void usage(FILE *fp, int argc, char **argv)
 	 "-h | --help          Print this message\n"
 	 "-a | --auth          [再]認証を行う\n"
 	 "                     -u オプションでエイリアスを指定できます\n"
+	 "-D | --Direct        DM関連の操作を行う\n"
+	 "                     -p オプションと-n オプションでユーザ名指定でダイレクトメッセージを送る\n"
+	 "                     -r オプションでダイレクトメッセージを読む\n"
+	 "                     -r と -n オプションで\"\"と指定すると自分の発言を読む\n"
+	 "                     -d と -i オプションでID指定でメッセージを消す\n"
 	 "-p | --post status   タイムラインへ投稿\n"
 	 "                     -i オプションでそのIDに対してのリプライ動作\n"
 	 "                     (@は自分で付けてください。@省略時は@が自動付与されます)\n"
@@ -738,6 +855,7 @@ namespace CMDLINE_OPT
 		PUT_HELP	= 1,
 		AUTH,
 		DELTW,
+		DIRECT,
 		FAVORITES,
 		POST,
 		READTL,
@@ -758,6 +876,7 @@ static const struct option
 long_options[] = {
 	{ "auth",		no_argument,		NULL, CMDLINE_OPT::AUTH			},
 	{ "del",		no_argument,		NULL, CMDLINE_OPT::DELTW		},
+	{ "Direct",		no_argument,		NULL, CMDLINE_OPT::DIRECT		},
 	{ "Fav",		no_argument,		NULL, CMDLINE_OPT::FAVORITES	},
 	{ "help",		no_argument,		NULL, CMDLINE_OPT::PUT_HELP		},
 	{ "id",			required_argument,	NULL, CMDLINE_OPT::ID			},
@@ -779,18 +898,19 @@ long_options[] = {
 int main(int argc,char *argv[])
 {
 	TwitterClient client;
-	bool doReadTL=false;
-	bool doRetweetTL=false;
-	bool doFavTL=false;
-	bool doPostTL=false;
-	bool doSearchTL = false;
-	bool doAuth = false;
-	bool doDeltw = false;
-	bool doList = false;
-	bool doTest = false;
-	bool doSilent = false;	
-	bool useStreamAPI = false;	
-	bool setScerrnName = false;
+	bool doReadTL			= false;
+	bool doRetweetTL		= false;
+	bool doFavTL			= false;
+	bool doPostTL			= false;
+	bool doSearchTL			= false;
+	bool doAuth				= false;
+	bool doDeltw			= false;
+	bool doList				= false;
+	bool doTest				= false;
+	bool doSilent			= false;
+	bool doDirect			= false;
+	bool useStreamAPI		= false;
+	bool setScerrnName		= false;
 	string status,aries,screenuser,idstr,listname;
 
 	do_Verbose = false;
@@ -819,6 +939,10 @@ int main(int argc,char *argv[])
 
 		case CMDLINE_OPT::DELTW:
 			doDeltw = true;
+			break;
+
+		case CMDLINE_OPT::DIRECT:
+			doDirect = true;
 			break;
 			
 		case CMDLINE_OPT::POST:
@@ -897,6 +1021,30 @@ int main(int argc,char *argv[])
 	initUserInfo(client);
 	if(doTest){
 		RequestTest(client,useStreamAPI);
+		return 0;
+	}
+	
+	if(doDirect){
+		if(doPostTL){
+			if(screenuser.empty()){
+				cout << "スクリーンネームを必ず指定してください" << endl;
+				return 0;
+			}
+			PostDirectMessage(client,screenuser,status,doSilent);
+		}else if(doReadTL){
+			if((!setScerrnName) && (screenuser.empty())){
+			// スクリーンネームが指定されてない場合はHOMEを表示
+				ReadDirectMessaeg(client);
+			}else{
+				ReadDirectPost(client);
+			}
+		}else if(doDeltw){
+			if(idstr.empty()){
+				cout << "IDを必ず指定してください" << endl;
+				return 0;
+			}
+			RemoveDirectMessage(client,idstr,doSilent);
+		}
 		return 0;
 	}
 	

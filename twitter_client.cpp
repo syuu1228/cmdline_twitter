@@ -725,6 +725,115 @@ bool TwitterClient::createFavorites(const std::string &idstr,picojson::object &t
 	return true;
 }
 
+
+// ダイレクトメッセージを取得する。
+bool TwitterClient::getDirectMessage(
+	uint16_t count,
+	const std::string &since_id,const std::string &max_id,
+	picojson::array &rtimeline)
+{
+	HTTPRequestData	httpdata;
+		
+	httpdata[PARAM_COUNT] = tostring(count);
+	
+	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
+	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
+	
+	httpdata[PARAM_INCLUDE_ENTITIES]	= VALUE_FALSE;
+	httpdata[PARAM_SKIP_STATUS]			= VALUE_FALSE;
+	
+	if(! getRequestJson(
+		TW_DIRECT_GET,
+		httpdata,
+		rtimeline)
+	){
+		vprint("err getDirectMessage");
+		return false;
+	}
+	return true;
+}
+
+// 自分が投稿したダイレクトメッセージを取得する。
+bool TwitterClient::getDirectPosting(
+	uint16_t count,
+	const std::string &since_id,const std::string &max_id,
+	picojson::array &rtimeline)
+{
+	HTTPRequestData	httpdata;
+		
+	httpdata[PARAM_COUNT] = tostring(count);
+	
+	if(! since_id.empty())	httpdata[PARAM_SINCE_ID]	= since_id;
+	if(! max_id.empty())	httpdata[PARAM_MAX_ID]		= max_id;
+	
+	httpdata[PARAM_INCLUDE_ENTITIES]	= VALUE_FALSE;
+	
+	if(! getRequestJson(
+		TW_DIRECT_SENT,
+		httpdata,
+		rtimeline)
+	){
+		vprint("err getDirectPosting");
+		return false;
+	}
+	return true;
+}
+
+// DirectMessageを投稿
+bool TwitterClient::postDirectMessage(
+	const std::string &userid,const std::string &screenname,	
+	const std::string &text,
+	picojson::object &tweet)
+{
+	HTTPRequestData	httpdata;
+	
+	if(! userid.empty()){
+		httpdata[PARAM_USER_ID] = userid;
+	}else if(! screenname.empty()){
+		httpdata[PARAM_SCREEN_NAME] = screenname;
+	}else{
+		// どっちかのパラメータをいれること
+		return false;
+	}
+	httpdata["text"] = text;
+	
+	if(! postRequestJson(
+		TW_DIRECT_NEW,
+		httpdata,
+		tweet)
+	){
+		vprint("err postDirectMessage");
+		return false;
+	}
+	return true;
+}
+
+// DirectMessageを投稿
+bool TwitterClient::removeDirectMessage(
+	const std::string &idstr,
+	picojson::object &tweet)
+{
+	HTTPRequestData	httpdata;
+	
+	if(idstr.empty()){
+		return false;
+	}
+	httpdata[PARAM_ID] = idstr;
+	httpdata[PARAM_INCLUDE_ENTITIES]	= VALUE_FALSE;
+	
+	if(! postRequestJson(
+		TW_DIRECT_DESTROY,
+		httpdata,
+		tweet)
+	){
+		vprint("err removeDirectMessage");
+		return false;
+	}
+	return true;
+}
+
+
+
 bool TwitterClient::getMyList(picojson::array &rlists)
 {
 	return getUserList(
