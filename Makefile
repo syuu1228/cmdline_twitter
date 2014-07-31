@@ -6,11 +6,13 @@ TARGET    = ctw
 
 HASH_SRCS = hashcodes/crypto_hash.cpp hashcodes/sha1.cpp hashcodes/md5.cpp
 HTTP_SRCS = http/httpclient.cpp http/httpcurl.cpp
-SRCS	  = base64.cpp oauth.cpp twitter_client.cpp main.cpp
-OBJS	  = $(HASH_SRCS:%.cpp=%.o) $(HTTP_SRCS:%.cpp=%.o) $(SRCS:%.cpp=%.o)
-DEPS	  = $(HASH_SRCS:%.cpp=%.d) $(HTTP_SRCS:%.cpp=%.d) $(SRCS:%.cpp=%.d)
+AUTH_SRCS = oauth/base64.cpp oauth/oauth.cpp
+TWCR_SRCS = twitter/twitter_client.cpp
+SRCS	  = main.cpp
+OBJS	  = $(HASH_SRCS:%.cpp=%.o) $(HTTP_SRCS:%.cpp=%.o) $(AUTH_SRCS:%.cpp=%.o) $(TWCR_SRCS:%.cpp=%.o) $(SRCS:%.cpp=%.o)
+DEPS	  = $(HASH_SRCS:%.cpp=%.d) $(HTTP_SRCS:%.cpp=%.d) $(AUTH_SRCS:%.cpp=%.d) $(TWCR_SRCS:%.cpp=%.d) $(SRCS:%.cpp=%.d)
 KEYS	  = keys/apikeys.hpp
-INCLUDE_DIRS = ./hashcodes ./http ./include
+INCLUDE_DIRS = ./hashcodes ./http ./oauth ./twitter ./include
 
 CFLAGS    = -Wall -O2 $(addprefix -I,$(INCLUDE_DIRS))
 LDFLAGS   = -lcurl
