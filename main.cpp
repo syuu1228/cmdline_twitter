@@ -745,6 +745,7 @@ void SearchTimeline(TwitterClient &client,const std::string &ques)
 // ユーザストリーム用コールバック関数。ユーザストリームからデータが来るごとに呼び出される
 bool UserStreamCallback(picojson::object &jobj,void* userdata)
 {
+	picojson::object nobj;
 	if(! jobj["text"].is<picojson::null>()){
 		printTweet(jobj);
 		return true;
@@ -757,12 +758,29 @@ bool UserStreamCallback(picojson::object &jobj,void* userdata)
 		cout << "get friends_str object " << endl;
 		return true;
 	}
+	if(! jobj["direct_message"].is<picojson::null>()){
+		cout << "Direct Messageイベントが着ました ----------------------------" << endl;
+		nobj = jobj["direct_message"].get<picojson::object>();
+		// DMはそのままやってくるっぽい
+		printDM(nobj);
+		cout << "-------------------------------------------------------------" << endl;
+		return true;
+	}
 	if(! jobj["event"].is<picojson::null>()){
 		cout << "get event object " << endl;
+		cout << jobj["event"].serialize(true) << endl;
 		return true;
 	}
 	if(! jobj["delete"].is<picojson::null>()){
-		cout << "get delete object " << endl;
+		cout << "つい消しを検出 ----------------------------------------------" << endl;
+		picojson::value tmpval = jobj["delete"].get("status");
+		if (tmpval.is<picojson::null>()){
+			cout << jobj["delete"].serialize(true) << endl;
+		}else{
+			nobj = tmpval.get<picojson::object>();
+			cout << "ユーザID " << nobj["user_id_str"].to_str() << " が 発言ID " << nobj["id_str"].to_str() << " を消しました" << endl;
+		}
+		cout << "-------------------------------------------------------------" << endl;
 		return true;
 	}
 	if(! jobj["scrub_geo"].is<picojson::null>()){
@@ -771,6 +789,7 @@ bool UserStreamCallback(picojson::object &jobj,void* userdata)
 	}
 	if(! jobj["limit"].is<picojson::null>()){
 		cout << "get limit object " << endl;
+		cout << jobj["limit"].serialize(true) << endl;
 		return true;
 	}
 	if(! jobj["status_withheld"].is<picojson::null>()){
@@ -783,10 +802,12 @@ bool UserStreamCallback(picojson::object &jobj,void* userdata)
 	}
 	if(! jobj["disconnect"].is<picojson::null>()){
 		cout << "get disconnect object " << endl;
+		cout << jobj["disconnect"].serialize(true) << endl;
 		return true;
 	}
 	if(! jobj["warning"].is<picojson::null>()){
 		cout << "get warning object " << endl;
+		cout << jobj["warning"].serialize(true) << endl;
 		return true;
 	}
 	cout << "get ??? object " << endl;
