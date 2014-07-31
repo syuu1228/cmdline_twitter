@@ -293,20 +293,32 @@ static void printTweet(picojson::object &tweet)
 {
 	using namespace picojson;
 	using namespace std;
-	string tmstr,textstr;
+	string tmstr,textstr,rtmstr;
 	
 	if(! tweet["user"].is<object>()){
 		// ユーザ情報なし
 		return;
 	}
 	object uobj = tweet["user"].get<object>();	// ユーザ情報取得
-	// 時間を直す
+	object robj;
+	object rtusr;
+	bool retweeted=false;
+	
 	get_local_time_string(tweet["created_at"].to_str(),tmstr);
+	
 	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
 	if(tweet["retweeted_status"].is<object>()){
 		// リツィート時の完全な本文はretweeted_statusに含まれるそうな
-		object robj = tweet["retweeted_status"].get<object>();
+		robj = tweet["retweeted_status"].get<object>();
+		// 情報が足りない…
+		if(! robj["user"].is<object>()){
+			return;
+		}
+		
+		rtusr = robj["user"].get<object>();
+		get_local_time_string(robj["created_at"].to_str(),rtmstr);
 		textstr = robj["text"].to_str();
+		retweeted = true;
 	}else{
 		textstr = tweet["text"].to_str();
 	}
@@ -315,8 +327,15 @@ static void printTweet(picojson::object &tweet)
 	ReplaceString(textstr,"&amp;","&");
 	// 実際に出力
 	cout << "\033[32m";
-	cout << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() << " " 
-		 << tweet["id_str"].to_str() << " " << tmstr << endl;
+	if(retweeted){
+		cout << "RT: " << rtusr["name"].to_str() << " @" << rtusr["screen_name"].to_str() << " " 
+			 << robj["id_str"].to_str() << " " << rtmstr << endl;
+		cout << " from: " << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() << " " 
+			 << tweet["id_str"].to_str() << " " << tmstr << endl;
+	}else{
+		cout << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() << " " 
+			 << tweet["id_str"].to_str() << " " << tmstr << endl;
+	}
 	cout << "\033[37m";
 	cout << textstr << endl;
 	cout << "\033[0m";
