@@ -164,7 +164,29 @@ protected:
 	
 public:
 	TwitterClient();
+	
+	TwitterClient(const TwitterClient &rhs){
+		m_auth			= rhs.m_auth;
+		m_verbose		= rhs.m_verbose;
+		m_user_name		= rhs.m_user_name;
+		m_user_screen	= rhs.m_user_screen;
+		m_user_id		= rhs.m_user_id;
+		m_bufSteam		= rhs.m_bufSteam;
+		m_lasterror		= rhs.m_lasterror;
+	};
+	
+	TwitterClient& operator=(const TwitterClient &rhs){
+		m_auth			= rhs.m_auth;
+		m_verbose		= rhs.m_verbose;
+		m_user_name		= rhs.m_user_name;
+		m_user_screen	= rhs.m_user_screen;
+		m_user_id		= rhs.m_user_id;
+		m_bufSteam		= rhs.m_bufSteam;
+		m_lasterror		= rhs.m_lasterror;
+		return *this;
+	}	
 	virtual ~TwitterClient();
+	
 
 	void setComsumerPair(const std::string &key,const std::string &sec);
 	void setUserAccessPair(const std::string &key,const std::string &sec);
