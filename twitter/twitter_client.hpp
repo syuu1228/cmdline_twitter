@@ -111,6 +111,11 @@ namespace TwitterRest1_1
 	static const std::string	PARAM_ID_STR					= "id_str";
 	static const std::string	PARAM_NAME						= "name";
 	static const std::string	PARAM_SCREEN_NAME				= "screen_name";
+	static const std::string	PARAM_USER						= "user";
+	static const std::string	PARAM_RTSTAT					= "retweeted_status";
+	static const std::string	PARAM_SENDER					= "sender";
+	static const std::string	PARAM_RECIPIENT					= "recipient";
+	static const std::string	PARAM_CREATEAT					= "created_at";
 	
 	static const std::string	JSON_ENDPOINT					= ".json";
 	

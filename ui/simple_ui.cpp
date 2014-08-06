@@ -34,6 +34,7 @@
 #include <getopt.h>
 
 #include "simple_ui.hpp"
+#include "twitter_json.hpp"
 
 using namespace std;
 
@@ -88,6 +89,7 @@ void SimpleUI::RequestTest()
 	int getpost;
 	bool bget=false;
 	unsigned long rescode=0;
+	
 	if(opt.getStreamAPI()){
 		cout << "!!! Streaming APIモードです !!!" << endl;
 	}
@@ -179,48 +181,43 @@ inline static void get_local_time_string(const std::string &src,std::string &dst
 void SimpleUI::printTweet(picojson::object &tweet)
 {
 	using namespace picojson;
-	using namespace std;
-	string tmstr,textstr,rtmstr;
+	using namespace TwitterJson;
+	using namespace TwitterRest1_1;
 	
-	if(! tweet["user"].is<object>()){
-		// ユーザ情報なし
-		return;
-	}
-	object uobj = tweet["user"].get<object>();	// ユーザ情報取得
+	string tmstr,textstr,rtmstr;
+
+	object uobj;
 	object robj;
 	object rtusr;
 	bool retweeted=false;
+
+	if(! TwitterJson::getUser(tweet,uobj)) return;
 	
-	get_local_time_string(tweet["created_at"].to_str(),tmstr);
+	get_local_time_string(tweet[PARAM_CREATEAT].to_str(),tmstr);
 	
-	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
-	if(tweet["retweeted_status"].is<object>()){
-		// リツィート時の完全な本文はretweeted_statusに含まれるそうな
-		robj = tweet["retweeted_status"].get<object>();
-		// 情報が足りない…
-		if(! robj["user"].is<object>()){
-			return;
-		}
+	// リツィート時の完全な本文はretweeted_statusに含まれるそうな
+	if(TwitterJson::getReTweet(tweet,robj)){
+		if(! TwitterJson::getUser(robj,rtusr)) return;
 		
-		rtusr = robj["user"].get<object>();
-		get_local_time_string(robj["created_at"].to_str(),rtmstr);
+		get_local_time_string(robj[PARAM_CREATEAT].to_str(),rtmstr);
 		textstr = robj["text"].to_str();
 		retweeted = true;
 	}else{
 		textstr = tweet["text"].to_str();
 	}
+	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
 	ReplaceString(textstr,"&lt;","<");
 	ReplaceString(textstr,"&gt;",">");
 	ReplaceString(textstr,"&amp;","&");
 	// 実際に出力
 	cout << "\033[32m";
 	if(retweeted){
-		cout << "RT: " << rtusr["name"].to_str() << " @" << rtusr["screen_name"].to_str() << " " 
+		cout << "RT: " << rtusr["name"].to_str() << " @" << rtusr[PARAM_SCREEN_NAME].to_str() << " " 
 			 << robj["id_str"].to_str() << " " << rtmstr << endl;
-		cout << " from: " << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() << " " 
+		cout << " from: " << uobj["name"].to_str() << " @" << uobj[PARAM_SCREEN_NAME].to_str() << " " 
 			 << tweet["id_str"].to_str() << " " << tmstr << endl;
 	}else{
-		cout << uobj["name"].to_str() << " @" << uobj["screen_name"].to_str() << " " 
+		cout << uobj["name"].to_str() << " @" << uobj[PARAM_SCREEN_NAME].to_str() << " " 
 			 << tweet["id_str"].to_str() << " " << tmstr << endl;
 	}
 	cout << "\033[37m";
@@ -231,21 +228,17 @@ void SimpleUI::printTweet(picojson::object &tweet)
 void SimpleUI::printDM(picojson::object &tweet)
 {
 	using namespace picojson;
-	using namespace std;
-	string tmstr,textstr;
+	using namespace TwitterJson;
+	using namespace TwitterRest1_1;
 	
-	if(! tweet["sender"].is<object>()){
-		// Sender情報なし
-		return;
-	}
-	if(! tweet["recipient"].is<object>()){
-		// recipient情報なし
-		return;
-	}
-	object sender	= tweet["sender"].get<object>();	// DMを送ったユーザ情報取得
-	object receiver	= tweet["recipient"].get<object>();	// DMを受け取ったユーザ情報取得
+	string tmstr,textstr;
+	object sender;		// DMを送ったユーザ情報取得
+	object receiver;	// DMを受け取ったユーザ情報取得
+
+	if(! TwitterJson::getSender(tweet,sender)) return;
+	if(! TwitterJson::getRecipient(tweet,receiver)) return;
 	// 時間を直す
-	get_local_time_string(tweet["created_at"].to_str(),tmstr);
+	get_local_time_string(tweet[PARAM_CREATEAT].to_str(),tmstr);
 	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
 	textstr = tweet["text"].to_str();
 	ReplaceString(textstr,"&lt;","<");
@@ -253,9 +246,9 @@ void SimpleUI::printDM(picojson::object &tweet)
 	ReplaceString(textstr,"&amp;","&");
 	// 実際に出力
 	cout << "\033[32m";
-	cout << "Fm: " << sender["name"].to_str() << " @" << sender["screen_name"].to_str() << " " 
+	cout << "Fm: " << sender["name"].to_str() << " @" << sender[PARAM_SCREEN_NAME].to_str() << " " 
 		 << tweet["id_str"].to_str() << " " << tmstr << endl;
-	cout << "To: "<< receiver["name"].to_str() << " @" << receiver["screen_name"].to_str() << endl;
+	cout << "To: "<< receiver["name"].to_str() << " @" << receiver[PARAM_SCREEN_NAME].to_str() << endl;
 	
 	cout << "\033[37m";
 	cout << textstr << endl;
@@ -268,7 +261,8 @@ void SimpleUI::printDM(picojson::object &tweet)
 void SimpleUI::printTimeline(picojson::array &timeline)
 {
 	using namespace picojson;
-	using namespace std;
+	using namespace TwitterJson;
+	using namespace TwitterRest1_1;
 
 	// Twitterからの戻りは先が最新なので、逆順に表示
 	array::reverse_iterator it;
@@ -286,7 +280,8 @@ void SimpleUI::printTimeline(picojson::array &timeline)
 void SimpleUI::printDMline(picojson::array &timeline)
 {
 	using namespace picojson;
-	using namespace std;
+	using namespace TwitterJson;
+	using namespace TwitterRest1_1;
 
 	// Twitterからの戻りは先が最新なので、逆順に表示
 	array::reverse_iterator it;
@@ -303,7 +298,8 @@ void SimpleUI::printDMline(picojson::array &timeline)
 void SimpleUI::printList(picojson::array &lists)
 {
 	using namespace picojson;
-	using namespace std;
+	using namespace TwitterJson;
+	using namespace TwitterRest1_1;
 	
 	string tmstr,textstr;
 
@@ -439,6 +435,7 @@ void SimpleUI::PostTimeline(const std::string &status)
 // リプライする
 void SimpleUI::ReplyTimeline(const std::string &status,const std::string &idstr)
 {
+	using namespace TwitterRest1_1;
 	picojson::object tweet;
 	
 	// @付けてるかチェックする
@@ -454,12 +451,10 @@ void SimpleUI::ReplyTimeline(const std::string &status,const std::string &idstr)
 			putRequestError();
 			return;
 		}
-		if(! srctweet["user"].is<picojson::object>()){
-			// ユーザ情報なし
-			return;
-		}
-		picojson::object uobj = srctweet["user"].get<picojson::object>();	// ユーザ情報取得
-		std::string newstatus = "@" + uobj["screen_name"].to_str() + " " + status;
+		picojson::object uobj;
+		if(! TwitterJson::getUser(srctweet,uobj)) return;
+		
+		std::string newstatus = "@" + uobj[PARAM_SCREEN_NAME].to_str() + " " + status;
 		if(! client.postStatus(newstatus,idstr,tweet)){
 			putRequestError();
 			return;
