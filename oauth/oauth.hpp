@@ -1,5 +1,4 @@
-#ifndef __OAUTH_H__
-#define __OAUTH_H__
+#pragma once
 //
 // OAUTH 1.0クライアントの実装
 //
@@ -134,7 +133,4 @@ public:
 	
 };
 
-
-	
-#endif // __OAUTH_H__
 

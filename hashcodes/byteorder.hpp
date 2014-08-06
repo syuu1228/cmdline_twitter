@@ -1,5 +1,4 @@
-#ifndef __BYTEORDER_H__
-#define __BYTEORDER_H__
+#pragma once
 
 // バイトオーダ変換関連
 //
@@ -46,6 +45,4 @@ inline uint32_t left_rotate32(uint32_t x, size_t n)
 {
     return (x<<n) ^ (x>> (32-n));
 }
-
-#endif // __BYTEORDER_H__
 

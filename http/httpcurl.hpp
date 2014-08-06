@@ -1,5 +1,4 @@
-#ifndef __HTTPCURL_H__
-#define __HTTPCURL_H__
+#pragma once
 //
 // httpクライアントの実装 (cURL版)
 //
@@ -65,7 +64,4 @@ public:
 	virtual bool customRequest(const std::string &url,const std::string &data,const std::string &req,Func_http_callback callbk=NULL,void* udata=NULL);
 };
 
-
-	
-#endif // __HTTPCURL_H__
 

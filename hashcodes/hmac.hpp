@@ -1,5 +1,5 @@
-#ifndef __HMAC_H__
-#define __HMAC_H__
+#pragma once
+
 //
 // HMAC 鍵付ハッシングクラス
 // HMAC: Keyed-Hashing for Message Authentication
@@ -131,6 +131,4 @@ void hmac<_Thash>::create_digest(const void* data,size_t datalen,const void* key
 
 typedef hmac<sha1>			hmac_sha1;
 typedef hmac<md5>			hmac_md5;
-	
-#endif // __HMAC_H__
 

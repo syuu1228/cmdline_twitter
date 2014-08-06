@@ -1,5 +1,4 @@
-#ifndef __BASE64_H__
-#define __BASE64_H__
+#pragma once
 //
 // BASE64変換
 //
@@ -41,6 +40,4 @@ public:
 };
 
 
-	
-#endif // __BASE64_H__
 

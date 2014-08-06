@@ -1,5 +1,4 @@
-#ifndef __TYPEDEF_H__
-#define __TYPEDEF_H__
+#pragma once
 
 //
 // サイズ型定義用ヘッダ
@@ -35,7 +34,4 @@
 #else
 #include <stdint.h>
 #endif
-
-
-#endif // __TYPEDEF_H__
 

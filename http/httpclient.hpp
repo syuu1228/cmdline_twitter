@@ -1,5 +1,4 @@
-#ifndef __HTTPCLIENT_H__
-#define __HTTPCLIENT_H__
+#pragma once
 //
 // httpクライアントの実装
 //
@@ -128,6 +127,4 @@ public:
 extern "C" {
 extern void url_encode(const std::string &src,std::string &dst);
 }
-	
-#endif // __BASE64_H__
 

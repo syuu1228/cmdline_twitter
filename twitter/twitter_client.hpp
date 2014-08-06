@@ -1,5 +1,4 @@
-#ifndef __TWITTERCLIENT_H__
-#define __TWITTERCLIENT_H__
+#pragma once
 //
 // Twitter クライアントの実装
 //
@@ -314,7 +313,4 @@ public:
 	}
 };
 
-
-
-#endif // __TWITTERCLIENT_H__
 

@@ -1,5 +1,5 @@
-#ifndef __MD5_H__
-#define __MD5_H__
+#pragma once
+
 //
 // MD5 暗号化ハッシュ関数クラス
 // RFC1321 を参照のこと
@@ -70,7 +70,4 @@ protected:
 	inline virtual uint8_t* get_digest_buffer()
 	{	return m_digest;};
 };
-
-	
-#endif // __MD5_H__
 

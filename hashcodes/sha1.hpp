@@ -1,6 +1,4 @@
-#ifndef __SHA1_H__
-#define __SHA1_H__
-
+#pragma once
 //
 // SHA-1 暗号化ハッシュ関数クラス
 // FIPS PUB 180-1、US Secure Hash Algorithm 1 (SHA1)、RFC3174 を参照のこと
@@ -65,7 +63,4 @@ protected:
 	inline virtual uint8_t* get_digest_buffer()
 	{	return m_digest;};
 };
-
-	
-#endif // __SHA1_H__
 

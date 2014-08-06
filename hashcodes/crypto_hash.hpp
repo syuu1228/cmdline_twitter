@@ -1,5 +1,4 @@
-#ifndef __CRYPTO_HASH_H__
-#define __CRYPTO_HASH_H__
+#pragma once
 
 // 暗号化ハッシュ関数クラスの親定義
 // これを派生して個々のハッシュ関数クラスを定義すること
@@ -65,6 +64,4 @@ public:
 
 
 void tostring_digest(uint8_t* out,size_t size,std::string &dst);
-
-#endif // __CRYPTO_HASH_H__
 
