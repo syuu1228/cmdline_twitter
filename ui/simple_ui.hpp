@@ -34,8 +34,9 @@ public:
 protected:
 	cmdlineOption opt;
 	TwitterClient client;
+	minisetting::object	setting;
 
-	void init(cmdlineOption &option,TwitterClient &cent);
+	void init(cmdlineOption &option,TwitterClient &cent,minisetting::object &uset);
 	
 	void printTweet(picojson::object &tweet);
 	void printTimeline(picojson::array &timeline);
@@ -66,6 +67,11 @@ protected:
 	void SearchTimeline(const std::string &ques);
 	void ReadUserStream(const std::string &trackword);
 
+	
+	void UserStreamDirectMessage(picojson::object &jobj);
+	void UserStreamDeleteTL(picojson::object &jobj);
+	void UserStreamEvent(picojson::object &jobj);
+
 
 	bool UserStreamCallback(picojson::object &jobj);
 	static bool UserStreamCallbackEntry(picojson::object &jobj,void* userdata);
@@ -77,7 +83,7 @@ public:
 	SimpleUI();
 	~SimpleUI();
 	
-	void Execute(cmdlineOption &option,TwitterClient &cent);
+	void Execute(cmdlineOption &option,TwitterClient &cent,minisetting::object &uset);
 };
 
 

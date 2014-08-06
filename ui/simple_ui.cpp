@@ -317,6 +317,8 @@ void SimpleUI::printList(picojson::array &lists)
 }
 
 
+// ------------------------------------------------------------------------------
+
 // ユーザ情報の初期化
 bool SimpleUI::initUserInfo()
 {
@@ -335,7 +337,7 @@ void SimpleUI::ReadMemtioonTimeline()
 {
 	picojson::array timeline;
 	if(! client.getMentionsTimeline(
-		200,
+		setting["READHOME_COUNT"].get<int>(),
 		"",
 		"",
 		timeline)
@@ -351,11 +353,11 @@ void SimpleUI::ReadHomeTimeline()
 {
 	picojson::array timeline;
 	if(! client.getHomeTimeline(
-		200,
+		setting["READHOME_COUNT"].get<int>(),
 		"",
 		"",
-		false,			// RT含めない
-		false,			// @含めない
+		setting["READHOME_VIEWRT"].get<bool>(),			// RT
+		setting["READHOME_VIEWMENTION"].get<bool>(),	// @
 		timeline)
 	){
 		putRequestError();
@@ -371,11 +373,11 @@ void SimpleUI::ReadUserTimeline(const std::string &name)
 	
 	if(name.empty()){
 		if(! client.getMyTimeline(
-			200,
+			setting["READUSER_COUNT"].get<int>(),
 			"",
 			"",
-			true,			// RT含める
-			true,			// @含める
+			setting["READUSER_VIEWRT"].get<bool>(),			// RT
+			setting["READUSER_VIEWMENTION"].get<bool>(),	// @
 			timeline)
 		){
 			putRequestError();
@@ -385,11 +387,11 @@ void SimpleUI::ReadUserTimeline(const std::string &name)
 		if(! client.getUserTimeline(
 			"",
 			name,
-			200,
+			setting["READUSER_COUNT"].get<int>(),
 			"",
 			"",
-			true,			// RT含める
-			true,			// @含める
+			setting["READUSER_VIEWRT"].get<bool>(),			// RT
+			setting["READUSER_VIEWMENTION"].get<bool>(),	// @
 			timeline)
 		){
 			putRequestError();
@@ -491,7 +493,7 @@ void SimpleUI::ReadDirectMessaeg()
 {
 	picojson::array timeline;
 	if(! client.getDirectMessage(
-		200,
+		setting["READDM_COUNT"].get<int>(),
 		"",
 		"",
 		timeline)
@@ -507,7 +509,7 @@ void SimpleUI::ReadDirectPost()
 {
 	picojson::array timeline;
 	if(! client.getDirectPosting(
-		200,
+		setting["READDM_COUNT"].get<int>(),
 		"",
 		"",
 		timeline)
@@ -583,10 +585,10 @@ void SimpleUI::ReadListTimeline(const std::string &name,const std::string &listn
 	if(name.empty()){
 		if(! client.getMyListTimeline(
 			listname,
-			200,
+			setting["READLIST_COUNT"].get<int>(),
 			"",
 			"",
-			true,			// RT含める
+			setting["READLIST_VIEWRT"].get<bool>(),			// RT
 			timeline)
 		){
 			putRequestError();
@@ -597,10 +599,10 @@ void SimpleUI::ReadListTimeline(const std::string &name,const std::string &listn
 			listname,
 			"",
 			name,
-			200,
+			setting["READLIST_COUNT"].get<int>(),
 			"",
 			"",
-			true,			// RT含める
+			setting["READLIST_VIEWRT"].get<bool>(),			// RT
 			timeline)
 		){
 			putRequestError();
@@ -629,6 +631,41 @@ void SimpleUI::SearchTimeline(const std::string &ques)
 	printTimeline(timeline);
 }
 
+// ---------------------------------------------------------------------
+
+void SimpleUI::UserStreamDirectMessage(picojson::object &jobj)
+{
+	picojson::object nobj;	
+	cout << "Direct Messageイベントが着ました ----------------------------" << endl;
+	nobj = jobj["direct_message"].get<picojson::object>();
+	// DMはそのままやってくるっぽい
+	printDM(nobj);
+	cout << "-------------------------------------------------------------" << endl;
+}
+
+void SimpleUI::UserStreamDeleteTL(picojson::object &jobj)
+{
+	picojson::object nobj;
+	picojson::value tmpval = jobj["delete"].get("status");
+	
+	if (! tmpval.is<picojson::object>()) return;
+	nobj = tmpval.get<picojson::object>();
+	
+	cout << "つい消しを検出 ----------------------------------------------" << endl;
+	cout << "ユーザID " << nobj["user_id_str"].to_str() << " が 発言ID " << nobj["id_str"].to_str() << " を消しました" << endl;
+	cout << "-------------------------------------------------------------" << endl;
+}
+
+void SimpleUI::UserStreamEvent(picojson::object &jobj)
+{
+	cout << "get event object " << endl;
+	cout << jobj["event"].serialize(true) << endl;
+}
+
+
+
+
+
 bool SimpleUI::UserStreamCallbackEntry(picojson::object &jobj,void* userdata)
 {
 	SimpleUI *pThat = reinterpret_cast<SimpleUI *>(userdata);
@@ -645,40 +682,24 @@ bool SimpleUI::UserStreamCallback(picojson::object &jobj)
 		return true;
 	}
 	if(! jobj["friends"].is<picojson::null>()){
-		cout << "get friends object " << endl;
 		return true;
 	}
 	if(! jobj["friends_str"].is<picojson::null>()){
-		cout << "get friends_str object " << endl;
 		return true;
 	}
 	if(! jobj["direct_message"].is<picojson::null>()){
-		cout << "Direct Messageイベントが着ました ----------------------------" << endl;
-		nobj = jobj["direct_message"].get<picojson::object>();
-		// DMはそのままやってくるっぽい
-		printDM(nobj);
-		cout << "-------------------------------------------------------------" << endl;
+		UserStreamDirectMessage(jobj);
 		return true;
 	}
 	if(! jobj["event"].is<picojson::null>()){
-		cout << "get event object " << endl;
-		cout << jobj["event"].serialize(true) << endl;
+		UserStreamEvent(jobj);
 		return true;
 	}
 	if(! jobj["delete"].is<picojson::null>()){
-		cout << "つい消しを検出 ----------------------------------------------" << endl;
-		picojson::value tmpval = jobj["delete"].get("status");
-		if (tmpval.is<picojson::null>()){
-			cout << jobj["delete"].serialize(true) << endl;
-		}else{
-			nobj = tmpval.get<picojson::object>();
-			cout << "ユーザID " << nobj["user_id_str"].to_str() << " が 発言ID " << nobj["id_str"].to_str() << " を消しました" << endl;
-		}
-		cout << "-------------------------------------------------------------" << endl;
+		UserStreamDeleteTL(jobj);
 		return true;
 	}
 	if(! jobj["scrub_geo"].is<picojson::null>()){
-		cout << "get scrub_geo object " << endl;
 		return true;
 	}
 	if(! jobj["limit"].is<picojson::null>()){
@@ -687,11 +708,9 @@ bool SimpleUI::UserStreamCallback(picojson::object &jobj)
 		return true;
 	}
 	if(! jobj["status_withheld"].is<picojson::null>()){
-		cout << "get status_withheld object " << endl;
 		return true;
 	}
 	if(! jobj["user_withheld"].is<picojson::null>()){
-		cout << "get user_withheld object " << endl;
 		return true;
 	}
 	if(! jobj["disconnect"].is<picojson::null>()){
@@ -724,15 +743,16 @@ void SimpleUI::ReadUserStream(const std::string &trackword)
 	}
 }
 
-void SimpleUI::init(cmdlineOption &option,TwitterClient &cent)
+void SimpleUI::init(cmdlineOption &option,TwitterClient &cent,minisetting::object &uset)
 {
 	opt = option;
 	client = cent;
+	setting = uset;
 }
 
-void SimpleUI::Execute(cmdlineOption &option,TwitterClient &cent)
+void SimpleUI::Execute(cmdlineOption &option,TwitterClient &cent,minisetting::object &uset)
 {
-	init(option,cent);
+	init(option,cent,uset);
 	
 	// とりあえず自分自身の情報を取得
 	initUserInfo();

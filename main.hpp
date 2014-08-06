@@ -27,6 +27,7 @@
 
 #include <string>
 #include "typedef.hpp"
+#include "minisetting.hpp"
 #include "twitter_client.hpp"
 
 class cmdlineOption
@@ -87,8 +88,9 @@ class cmdlineOption
 class mainApp
 {
 protected:
-	cmdlineOption opt;
-	TwitterClient client;
+	cmdlineOption		opt;
+	TwitterClient		client;
+	minisetting::object	setting;
 
 	void usage(int argc, char *argv[]);
 	bool parse_cmdline(int argc, char *argv[]);
@@ -96,6 +98,10 @@ protected:
 	bool readAccessKey();
 	bool initUserInfo();
 	void doSimpleUIMode();
+	
+	void initSetting();
+	void readSetting();
+	void writeSetting();
 
 public:
 	mainApp(){}

@@ -50,6 +50,9 @@ static const string THIS_VERSION	= "0.0.2";
 static const string	DEFAULT_AUTH_FILE = ".authkey_";
 static const string	APP_DIR = ".ctw";
 
+static const string	DEFAULT_SETTING_FILE = "ctwrc";
+
+
 static int makedir(const string &dirname,mode_t mode)
 {
 #if defined(__MINGW32__)
@@ -155,6 +158,112 @@ bool mainApp::readAccessKey()
 	client.setUserAccessPair(key,sec);
 	return true;
 }
+
+// 設定ファイル系の初期化
+void mainApp::initSetting()
+{
+	setting["READHOME_COUNT"]		= minisetting::value(200);
+	setting["READHOME_VIEWRT"]		= minisetting::value(true);
+	setting["READHOME_VIEWMENTION"] = minisetting::value(true);
+	
+	setting["READUSER_COUNT"]		= minisetting::value(200);
+	setting["READUSER_VIEWRT"]		= minisetting::value(true);
+	setting["READUSER_VIEWMENTION"] = minisetting::value(true);
+
+	setting["READDM_COUNT"]			= minisetting::value(200);
+
+	setting["READLIST_COUNT"]		= minisetting::value(200);
+	setting["READLIST_VIEWRT"]		= minisetting::value(true);
+}
+
+// 設定ファイルの読み込み
+void mainApp::readSetting()
+{
+	using namespace minisetting;
+	string fname;
+	ifstream fin;
+	
+	initSetting();
+	
+	// ~/.ctw/以下から読み込みする
+	if(! get_app_dir(fname)){
+		cout << "HOME/.ctw/ ディレクトリを作成できません。" << endl;
+		cout << "設定ファイルを読み込めませんでした。" << endl;
+		cout << "デフォルトの設定を使用します" << endl;
+		return;
+	}
+	fname += DEFAULT_SETTING_FILE;
+	fin.open(fname.c_str());
+	if(! fin.is_open()){
+		cout << "設定ファイルを開けませんでした。" << endl;
+		cout << "デフォルトの設定を使用します" << endl;
+		writeSetting();
+		return;
+	}
+	parse(fin,setting);
+	fin.close();
+}
+
+// 設定ファイルが存在しない場合に新規に作成する
+void mainApp::writeSetting()
+{
+	using namespace minisetting;
+	string fname;
+	ofstream fout;
+	
+	// ~/.ctw/以下に保存する
+	if(! get_app_dir(fname)){
+//		cout << "HOME/.ctw/ ディレクトリを作成できません。" << endl;
+//		cout << "設定ファイルを書き込めませんでした。" << endl;
+//		cout << "デフォルトを使用します" << endl;
+		return;
+	}
+	fname += DEFAULT_SETTING_FILE;
+	
+	fout.open(fname.c_str(),ios::out);
+	if(! fout.is_open()){
+//		cout << "設定ファイルを書き込めませんでした。" << endl;
+//		cout << "デフォルトを使用します" << endl;
+		return;
+	}
+	
+	putcomment(fout,"cmd line twitter Setting file");
+	putcomment(fout,"");
+	putcomment(fout,"");
+	fout << endl;
+	putcomment(fout,"ホームタイムライン読み込み設定");
+	putcomment(fout,"ホームタイムラインの読み込み件数(20-200)");
+	putval(fout,setting,"READHOME_COUNT");
+	putcomment(fout,"ホームタイムラインでRTを表示するかどうか(true false)");
+	putval(fout,setting,"READHOME_VIEWRT");
+	putcomment(fout,"ホームタイムラインで@を表示するかどうか(true false)");
+	putval(fout,setting,"READHOME_VIEWMENTION");
+	fout << endl;
+	putcomment(fout,"ユーザタイムライン読み込み設定");
+	putcomment(fout,"ユーザタイムラインの読み込み件数(20-200)");
+	putval(fout,setting,"READUSER_COUNT");
+	putcomment(fout,"ユーザタイムラインでRTを表示するかどうか(true false)");
+	putval(fout,setting,"READUSER_VIEWRT");
+	putcomment(fout,"ユーザタイムラインで@を表示するかどうか(true false)");
+	putval(fout,setting,"READUSER_VIEWMENTION");
+	fout << endl;
+	putcomment(fout,"ダイレクトメッセージ読み込み設定");
+	putcomment(fout,"ダイレクトメッセージの読み込み件数(20-200)");
+	putval(fout,setting,"READDM_COUNT");
+	fout << endl;
+	putcomment(fout,"リスト読み込み設定");
+	putcomment(fout,"リストタイムラインの読み込み件数(20-200)");
+	putval(fout,setting,"READLIST_COUNT");
+	putcomment(fout,"リストタイムラインでRTを表示するかどうか(true false)");
+	putval(fout,setting,"READLIST_VIEWRT");
+	fout << endl;
+	fout << endl;	
+	putcomment(fout,"end file");
+	
+	fout.close();
+}
+
+
 
 
 
@@ -353,7 +462,7 @@ bool mainApp::parse_cmdline(int argc,char *argv[])
 void mainApp::doSimpleUIMode()	
 {
 	SimpleUI ui;
-	ui.Execute(opt,client);
+	ui.Execute(opt,client,setting);
 }
 
 int mainApp::DoMain(int argc,char *argv[])
@@ -377,6 +486,7 @@ int mainApp::DoMain(int argc,char *argv[])
 		// 認証の場合はいったんここで終わり
 		return 0;
 	}
+	readSetting();
 	
 	// ここから先はユーザのアクセスキーが必要
 	if(! readAccessKey()){
