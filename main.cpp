@@ -175,6 +175,9 @@ void mainApp::initSetting()
 	setting["READLIST_COUNT"]		= minisetting::value(200);
 	setting["READLIST_VIEWRT"]		= minisetting::value(true);
 	
+	setting["VIEW_SHORT"]			= minisetting::value(false);
+	setting["VIEW_SHORT_NAMEONLY"]	= minisetting::value(true);
+	setting["VIEW_STATUSID"]		= minisetting::value(true);
 	
 	setting["COLOR_NAME"]			= minisetting::value(TerminalColor::GREEN);
 	setting["COLOR_SCREENNAME"]		= minisetting::value(TerminalColor::BLUE);
@@ -270,6 +273,15 @@ void mainApp::writeSetting()
 	putval(fout,setting,"READLIST_COUNT");
 	putcomment(fout,"リストタイムラインでRTを表示するかどうか(true false)");
 	putval(fout,setting,"READLIST_VIEWRT");
+	fout << endl;
+	fout << endl;
+	putcomment(fout,"表示設定");
+	putcomment(fout,"短縮表示をおこなうかどうか(true false)");
+	putval(fout,setting,"VIEW_SHORT");
+	putcomment(fout,"短縮表示のとき、名前を登録名(スクリーンネーム以外)にする(true false)");
+	putval(fout,setting,"VIEW_SHORT_NAMEONLY");
+	putcomment(fout,"発言IDの表示をおこなうかどうか(true false)");
+	putval(fout,setting,"VIEW_STATUSID");
 	fout << endl;
 	fout << endl;
 	putcomment(fout,"色設定");

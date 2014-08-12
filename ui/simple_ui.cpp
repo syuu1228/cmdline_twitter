@@ -199,10 +199,25 @@ void SimpleUI::printUser(picojson::object &tweet,picojson::object &uobj)
 
 	get_local_time_string(tweet[PARAM_CREATEAT].to_str(),tmstr);
 	
-	term.Put(uobj["name"].to_str() 	,setting["COLOR_NAME"].get<string>());
-	term.Put(" @" + uobj[PARAM_SCREEN_NAME].to_str() ,setting["COLOR_SCREENNAME"].get<string>());
-	term.Put(" "  + tweet["id_str"].to_str() ,setting["COLOR_ID"].get<string>());
-	term.Puts(" " + tmstr ,setting["COLOR_TIME"].get<string>());
+	if(setting["VIEW_SHORT"].get<bool>()){
+		if(setting["VIEW_SHORT_NAMEONLY"].get<bool>()){
+			term.Put(uobj["name"].to_str() 	,setting["COLOR_NAME"].get<string>());
+		}else{
+			term.Put(uobj[PARAM_SCREEN_NAME].to_str() 	,setting["COLOR_SCREENNAME"].get<string>());
+		}
+		
+		if(setting["VIEW_STATUSID"].get<bool>()){
+			term.Put(" "  + tweet["id_str"].to_str() ,setting["COLOR_ID"].get<string>());
+		}
+		term.Put(" " + tmstr + " ",setting["COLOR_TIME"].get<string>());
+	}else{
+		term.Put(uobj["name"].to_str() 	,setting["COLOR_NAME"].get<string>());
+		term.Put(" @" + uobj[PARAM_SCREEN_NAME].to_str() ,setting["COLOR_SCREENNAME"].get<string>());
+		if(setting["VIEW_STATUSID"].get<bool>()){
+			term.Put(" "  + tweet["id_str"].to_str() ,setting["COLOR_ID"].get<string>());
+		}
+		term.Puts(" " + tmstr ,setting["COLOR_TIME"].get<string>());
+	}
 	
 	term.Reset();
 }
@@ -219,14 +234,19 @@ void SimpleUI::printRetweet(picojson::object &tweet,picojson::object &uobj,picoj
 	
 	textstr = robj["text"].to_str();	// Statusはこちらを使う
 	formatStatus(textstr);
-	
-	// RT元
+
 	term.Put("RT: " ,setting["COLOR_RTMARK"].get<string>());
-	printUser(robj,rtusr);
-	// RTした人
-	term.Put(" from: " ,setting["COLOR_RTMARK"].get<string>());	
-	printUser(tweet,uobj);
-	// 本文表示
+	
+	if(setting["VIEW_SHORT"].get<bool>()){
+		printUser(robj,rtusr);
+	}else{
+		// RT元
+		printUser(robj,rtusr);
+		// RTした人
+		term.Put(" from: " ,setting["COLOR_RTMARK"].get<string>());	
+		printUser(tweet,uobj);
+	}
+		// 本文表示
 	term.Puts(textstr,setting["COLOR_RTSTATUS"].get<string>());
 	term.Reset();
 }
