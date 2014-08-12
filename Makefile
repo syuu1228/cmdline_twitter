@@ -8,7 +8,7 @@ HASH_SRCS = hashcodes/crypto_hash.cpp hashcodes/sha1.cpp hashcodes/md5.cpp
 HTTP_SRCS = http/httpclient.cpp http/httpcurl.cpp
 AUTH_SRCS = oauth/base64.cpp oauth/oauth.cpp
 TWCR_SRCS = twitter/twitter_client.cpp
-UI_SRCS   = ui/simple_ui.cpp
+UI_SRCS   = ui/simple_ui.cpp ui/simple_terminal.cpp
 SRCS	  = main.cpp
 OBJS	  = $(HASH_SRCS:%.cpp=%.o) $(HTTP_SRCS:%.cpp=%.o) $(AUTH_SRCS:%.cpp=%.o) $(TWCR_SRCS:%.cpp=%.o) $(UI_SRCS:%.cpp=%.o) $(SRCS:%.cpp=%.o)
 DEPS	  = $(HASH_SRCS:%.cpp=%.d) $(HTTP_SRCS:%.cpp=%.d) $(AUTH_SRCS:%.cpp=%.d) $(TWCR_SRCS:%.cpp=%.d) $(UI_SRCS:%.cpp=%.d) $(SRCS:%.cpp=%.d)

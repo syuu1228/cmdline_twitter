@@ -174,6 +174,20 @@ void mainApp::initSetting()
 
 	setting["READLIST_COUNT"]		= minisetting::value(200);
 	setting["READLIST_VIEWRT"]		= minisetting::value(true);
+	
+	
+	setting["COLOR_NAME"]			= minisetting::value(TerminalColor::GREEN);
+	setting["COLOR_SCREENNAME"]		= minisetting::value(TerminalColor::BLUE);
+	setting["COLOR_ID"]  			= minisetting::value(TerminalColor::MAGENTA);
+	setting["COLOR_TIME"]  			= minisetting::value(TerminalColor::DARKYELLOW);
+	setting["COLOR_STATUS"]  		= minisetting::value(TerminalColor::GREY);
+	setting["COLOR_RTMARK"]  		= minisetting::value(TerminalColor::GREEN);
+	setting["COLOR_RTSTATUS"]  		= minisetting::value(TerminalColor::GREY);
+	setting["COLOR_DMMARK"]  		= minisetting::value(TerminalColor::GREEN);
+	setting["COLOR_DMSTATUS"]	 	= minisetting::value(TerminalColor::GREY);
+	setting["COLOR_LISTNAME"] 	 	= minisetting::value(TerminalColor::GREEN);
+	setting["COLOR_LISTDETAIL"]  	= minisetting::value(TerminalColor::GREY);
+	
 }
 
 // 設定ファイルの読み込み
@@ -257,7 +271,31 @@ void mainApp::writeSetting()
 	putcomment(fout,"リストタイムラインでRTを表示するかどうか(true false)");
 	putval(fout,setting,"READLIST_VIEWRT");
 	fout << endl;
-	fout << endl;	
+	fout << endl;
+	putcomment(fout,"色設定");
+	putcomment(fout,"ユーザー名の色");
+	putval(fout,setting,"COLOR_NAME");
+	putcomment(fout,"スクリーンネームの色");
+	putval(fout,setting,"COLOR_SCREENNAME");
+	putcomment(fout,"発言IDの色");
+	putval(fout,setting,"COLOR_ID");
+	putcomment(fout,"発言内容の色");
+	putval(fout,setting,"COLOR_STATUS");
+	putcomment(fout,"RTマークの色");
+	putval(fout,setting,"COLOR_RTMARK");
+	putcomment(fout,"RT内容の色");
+	putval(fout,setting,"COLOR_RTSTATUS");
+	putcomment(fout,"DMマークの色");
+	putval(fout,setting,"COLOR_DMMARK");
+	putcomment(fout,"DM内容の色");
+	putval(fout,setting,"COLOR_DMSTATUS");
+	putcomment(fout,"リスト名の色");
+	putval(fout,setting,"COLOR_LISTNAME");
+	putcomment(fout,"リスト詳細の色");
+	putval(fout,setting,"COLOR_LISTDETAIL");
+	fout << endl;
+	fout << endl;
+	
 	putcomment(fout,"end file");
 	
 	fout.close();

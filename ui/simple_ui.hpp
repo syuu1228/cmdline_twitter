@@ -26,6 +26,7 @@
 //
 
 #include "main.hpp"
+#include "simple_terminal.hpp"
 
 class SimpleUI
 {
@@ -35,8 +36,14 @@ protected:
 	cmdlineOption opt;
 	TwitterClient client;
 	minisetting::object	setting;
+	SimpleTerminal term;
 
 	void init(cmdlineOption &option,TwitterClient &cent,minisetting::object &uset);
+	
+	void formatStatus(std::string &textstr);
+	void printUser(picojson::object &tweet,picojson::object &uobj);
+	void printRetweet(picojson::object &tweet,picojson::object &uobj,picojson::object &robj);
+
 	
 	void printTweet(picojson::object &tweet);
 	void printTimeline(picojson::array &timeline);

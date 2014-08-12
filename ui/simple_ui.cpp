@@ -178,51 +178,85 @@ inline static void get_local_time_string(const std::string &src,std::string &dst
 #endif	//__MINGW32__
 }
 
+void SimpleUI::formatStatus(std::string &textstr)
+{
+	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
+	ReplaceString(textstr,"&lt;","<");
+	ReplaceString(textstr,"&gt;",">");
+	ReplaceString(textstr,"&amp;","&");
+}
+
+
+
+
+
+void SimpleUI::printUser(picojson::object &tweet,picojson::object &uobj)
+{
+	using namespace picojson;
+	using namespace TwitterJson;
+	using namespace TwitterRest1_1;
+	std::string tmstr;
+
+	get_local_time_string(tweet[PARAM_CREATEAT].to_str(),tmstr);
+	
+	term.Put(uobj["name"].to_str() 	,setting["COLOR_NAME"].get<string>());
+	term.Put(" @" + uobj[PARAM_SCREEN_NAME].to_str() ,setting["COLOR_SCREENNAME"].get<string>());
+	term.Put(" "  + tweet["id_str"].to_str() ,setting["COLOR_ID"].get<string>());
+	term.Puts(" " + tmstr ,setting["COLOR_TIME"].get<string>());
+	
+	term.Reset();
+}
+
+void SimpleUI::printRetweet(picojson::object &tweet,picojson::object &uobj,picojson::object &robj)
+{
+	using namespace picojson;
+	using namespace TwitterJson;
+	using namespace TwitterRest1_1;
+	object rtusr;
+	string textstr;
+	
+	if(! TwitterJson::getUser(robj,rtusr)) return;
+	
+	textstr = robj["text"].to_str();	// Statusはこちらを使う
+	formatStatus(textstr);
+	
+	// RT元
+	term.Put("RT: " ,setting["COLOR_RTMARK"].get<string>());
+	printUser(robj,rtusr);
+	// RTした人
+	term.Put(" from: " ,setting["COLOR_RTMARK"].get<string>());	
+	printUser(tweet,uobj);
+	// 本文表示
+	term.Puts(textstr,setting["COLOR_RTSTATUS"].get<string>());
+	term.Reset();
+}
+
+
 void SimpleUI::printTweet(picojson::object &tweet)
 {
 	using namespace picojson;
 	using namespace TwitterJson;
 	using namespace TwitterRest1_1;
 	
-	string tmstr,textstr,rtmstr;
-
+	string textstr;
 	object uobj;
 	object robj;
-	object rtusr;
-	bool retweeted=false;
 
 	if(! TwitterJson::getUser(tweet,uobj)) return;
 	
-	get_local_time_string(tweet[PARAM_CREATEAT].to_str(),tmstr);
-	
-	// リツィート時の完全な本文はretweeted_statusに含まれるそうな
+	// RTのときは別処理
 	if(TwitterJson::getReTweet(tweet,robj)){
-		if(! TwitterJson::getUser(robj,rtusr)) return;
-		
-		get_local_time_string(robj[PARAM_CREATEAT].to_str(),rtmstr);
-		textstr = robj["text"].to_str();
-		retweeted = true;
-	}else{
-		textstr = tweet["text"].to_str();
+		printRetweet(tweet,uobj,robj);
+		return;
 	}
-	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
-	ReplaceString(textstr,"&lt;","<");
-	ReplaceString(textstr,"&gt;",">");
-	ReplaceString(textstr,"&amp;","&");
-	// 実際に出力
-	cout << "\033[32m";
-	if(retweeted){
-		cout << "RT: " << rtusr["name"].to_str() << " @" << rtusr[PARAM_SCREEN_NAME].to_str() << " " 
-			 << robj["id_str"].to_str() << " " << rtmstr << endl;
-		cout << " from: " << uobj["name"].to_str() << " @" << uobj[PARAM_SCREEN_NAME].to_str() << " " 
-			 << tweet["id_str"].to_str() << " " << tmstr << endl;
-	}else{
-		cout << uobj["name"].to_str() << " @" << uobj[PARAM_SCREEN_NAME].to_str() << " " 
-			 << tweet["id_str"].to_str() << " " << tmstr << endl;
-	}
-	cout << "\033[37m";
-	cout << textstr << endl;
-	cout << "\033[0m";
+	
+	// 通常ツイート
+	textstr = tweet["text"].to_str();
+	formatStatus(textstr);
+	
+	printUser(tweet,uobj);
+	term.Puts(textstr,setting["COLOR_STATUS"].get<string>());
+	term.Reset();
 }
 
 void SimpleUI::printDM(picojson::object &tweet)
@@ -239,20 +273,22 @@ void SimpleUI::printDM(picojson::object &tweet)
 	if(! TwitterJson::getRecipient(tweet,receiver)) return;
 	// 時間を直す
 	get_local_time_string(tweet[PARAM_CREATEAT].to_str(),tmstr);
-	// Twitterでは&lt &gt &ampだけは変換されるというわけわからん仕様みたいなので元に戻す
-	textstr = tweet["text"].to_str();
-	ReplaceString(textstr,"&lt;","<");
-	ReplaceString(textstr,"&gt;",">");
-	ReplaceString(textstr,"&amp;","&");
-	// 実際に出力
-	cout << "\033[32m";
-	cout << "Fm: " << sender["name"].to_str() << " @" << sender[PARAM_SCREEN_NAME].to_str() << " " 
-		 << tweet["id_str"].to_str() << " " << tmstr << endl;
-	cout << "To: "<< receiver["name"].to_str() << " @" << receiver[PARAM_SCREEN_NAME].to_str() << endl;
 	
-	cout << "\033[37m";
-	cout << textstr << endl;
-	cout << "\033[0m";
+	textstr = tweet["text"].to_str();
+	formatStatus(textstr);
+	// 実際に出力
+	term.Puts("Fm: ",setting["COLOR_DMMARK"].get<string>());
+	term.Put(sender["name"].to_str() ,setting["COLOR_NAME"].get<string>());	
+	term.Put(" @" + sender[PARAM_SCREEN_NAME].to_str() ,setting["COLOR_SCREENNAME"].get<string>());
+	term.Put(" "  + tweet["id_str"].to_str() ,setting["COLOR_ID"].get<string>());
+	term.Puts(" " + tmstr ,setting["COLOR_TIME"].get<string>());
+
+	term.Puts("To: ",setting["COLOR_DMMARK"].get<string>());
+	term.Put(receiver["name"].to_str() ,setting["COLOR_NAME"].get<string>());	
+	term.Puts(" @" + receiver[PARAM_SCREEN_NAME].to_str() ,setting["COLOR_SCREENNAME"].get<string>());
+	
+	term.Puts(textstr,setting["COLOR_DMSTATUS"].get<string>());
+	term.Reset();
 }
 
 
@@ -272,7 +308,6 @@ void SimpleUI::printTimeline(picojson::array &timeline)
 		object obj = it->get<object>();
 		printTweet(obj);
 	}
-//	cout << "\033[0m";
 }
 
 
@@ -291,7 +326,6 @@ void SimpleUI::printDMline(picojson::array &timeline)
 		object obj = it->get<object>();
 		printDM(obj);
 	}
-//	cout << "\033[0m";
 }
 
 
@@ -307,13 +341,13 @@ void SimpleUI::printList(picojson::array &lists)
 	
 	for(it=lists.begin();it!=lists.end();it++){
 		object obj = it->get<object>();
-		cout << "\033[32m";
-		cout << obj["slug"].to_str() << "  " << obj["member_count"].to_str() << "users"
-			<< "  [" << obj["mode"].to_str() << "]" << endl;
-		cout << "\033[37m";
-		cout << obj["description"].to_str() << endl;
+
+		term.Puts( obj["slug"].to_str() + "  "  + obj["member_count"].to_str() + "users ["
+			+ obj["mode"].to_str() + "]" , setting["COLOR_LISTNAME"].get<string>());
+		
+		term.Puts(obj["description"].to_str(),setting["COLOR_LISTDETAIL"].get<string>());
 	}
-	cout << "\033[0m";
+	term.Reset();
 }
 
 
