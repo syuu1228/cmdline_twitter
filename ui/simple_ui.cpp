@@ -671,17 +671,23 @@ void SimpleUI::ReadListTimeline(const std::string &name,const std::string &listn
 void SimpleUI::SearchTimeline(const std::string &ques)
 {
 	picojson::array timeline;
+	picojson::object result;
 	if(! client.searchTweets(
 		ques,
 		"ja",
 		TwitterRest1_1::SEARCH_RESTYPE_RECENT,
 		"",
 		"",
-		timeline)
+		result)
 	){
 		putRequestError();
 		return;
 	}
+	// Searchはstatusesとsearch_metadataの２エントリがある
+	if(! result["statuses"].is<picojson::array>()){
+		return ;
+	}
+	timeline = result["statuses"].get<picojson::array>();
 	printTimeline(timeline);
 }
 

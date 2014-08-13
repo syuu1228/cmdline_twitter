@@ -683,7 +683,7 @@ bool TwitterClient::retweetStatus(const std::string &idstr,picojson::object &twe
 
 // タイムライン検索
 bool TwitterClient::searchTweets(const std::string &q,const std::string &lang,const std::string &restype,
-		const std::string & since_id,const std::string & max_id,picojson::array &rtimeline)
+		const std::string & since_id,const std::string & max_id,picojson::object &result)
 {
 	HTTPRequestData	httpdata;
 	
@@ -698,7 +698,7 @@ bool TwitterClient::searchTweets(const std::string &q,const std::string &lang,co
 	if(! getRequestJson(
 		TW_SEARCH_TWEETS,
 		httpdata,
-		rtimeline)
+		result)
 	){
 		vprint("err searchTweets");
 		return false;
