@@ -53,7 +53,6 @@ static const string	APP_DIR = ".ctw";
 
 static const string	DEFAULT_SETTING_FILE = "ctwrc";
 
-
 static int makedir(const string &dirname,mode_t mode)
 {
 #if defined(__MINGW32__)

@@ -38,6 +38,8 @@
 
 using namespace std;
 
+extern "C" void cmd_init(void);
+extern "C" int cmd_run(const char *line);
 
 inline void ReplaceString(std::string &src,const std::string &from,const std::string &to)
 {
@@ -275,6 +277,7 @@ void Bot::printTweet(picojson::object &tweet)
         unsigned pos = textstr.find(" ") + 1;
         string stripped = pos == string::npos ? textstr : textstr.substr(pos);
         printf("%s:%d textstr=%s\n", __func__, __LINE__, stripped.c_str());
+        cmd_run(textstr.c_str());
 	formatStatus(textstr);
 	
 	printUser(tweet,uobj);
@@ -815,6 +818,7 @@ void Bot::init(cmdlineOption &option,TwitterClient &cent,minisetting::object &us
 
 void Bot::Execute(cmdlineOption &option,TwitterClient &cent,minisetting::object &uset)
 {
+        cmd_init();
 	init(option,cent,uset);
 	
 	// とりあえず自分自身の情報を取得
