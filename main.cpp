@@ -531,7 +531,6 @@ retry:
 	opt.setAries("twitosv");
 	opt.setReadTL(true);
 	opt.setStreamAPI(true);
-	client.serVerbose(true);
 	readSetting();
 	
 	// ここから先はユーザのアクセスキーが必要
