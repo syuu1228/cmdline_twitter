@@ -67,8 +67,7 @@ static int makedir(const string &dirname,mode_t mode)
 static bool get_app_dir(string &dirname)
 {
 	struct stat st;
-	dirname = getenv("HOME");
-	dirname += '/';
+	dirname = '/';
 	dirname += APP_DIR;
 	
 	if(stat(dirname.c_str(),&st) != 0){
