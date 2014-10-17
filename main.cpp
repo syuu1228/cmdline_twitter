@@ -525,6 +525,7 @@ void mainApp::doBotMode()
 
 int mainApp::DoMain(int argc,char *argv[])
 {
+retry:
 	tzset();
 	// このアプリのコンシューマキーなどを設定
 	client.setComsumerPair(AP_COMSUMER_KEY,AP_COMSUMER_SECRET);
@@ -537,7 +538,8 @@ int mainApp::DoMain(int argc,char *argv[])
 	
 	// ここから先はユーザのアクセスキーが必要
 	if(! readAccessKey()){
-		return -1;
+		do_Authentication();
+                goto retry;
 	}
 	doBotMode();
 	return 0;
