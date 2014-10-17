@@ -1,7 +1,7 @@
 CC        = $(CROSS_COMPILE)g++
 STRIP     = $(CROSS_COMPILE)strip
 
-TARGET    = ctw
+TARGET    = ctw.so
 
 HASH_SRCS = hashcodes/crypto_hash.cpp hashcodes/sha1.cpp hashcodes/md5.cpp
 HTTP_SRCS = http/httpclient.cpp http/httpcurl.cpp
@@ -14,7 +14,7 @@ DEPS	  = $(HASH_SRCS:%.cpp=%.d) $(HTTP_SRCS:%.cpp=%.d) $(AUTH_SRCS:%.cpp=%.d) $(
 KEYS	  = keys/apikeys.hpp
 INCLUDE_DIRS = ./hashcodes ./http ./oauth ./twitter ./ui ./include .
 
-CFLAGS    = -Wall -O2 $(addprefix -I,$(INCLUDE_DIRS)) -fPIC
+CFLAGS    = -Wall -O2 $(addprefix -I,$(INCLUDE_DIRS)) -fPIC -shared
 LDFLAGS   = -lcurl
 
 ifndef CONSUMER_KEY
