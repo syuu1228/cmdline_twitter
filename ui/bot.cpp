@@ -276,7 +276,6 @@ void Bot::printTweet(picojson::object &tweet)
 	textstr = tweet["text"].to_str();
         unsigned pos = textstr.find(" ") + 1;
         string stripped = pos == string::npos ? textstr : textstr.substr(pos);
-        printf("%s:%d textstr=%s\n", __func__, __LINE__, stripped.c_str());
         cmd_run(stripped.c_str());
 	formatStatus(textstr);
 	

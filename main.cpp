@@ -424,7 +424,6 @@ bool mainApp::parse_cmdline(int argc,char *argv[])
 	while(1){
 		int c = getopt_long_only(argc,argv,"",long_options,NULL);
 		
-                printf("%s:%d c=%c\n", __func__, __LINE__, c);
 		if(c == -1)		break;		// -1は解析終わり
 		switch (c) {
 		case 0:
@@ -531,6 +530,7 @@ retry:
 	opt.setAries("twitosv");
 	opt.setReadTL(true);
 	opt.setStreamAPI(true);
+        opt.setVerbose(false);
 	readSetting();
 	
 	// ここから先はユーザのアクセスキーが必要
