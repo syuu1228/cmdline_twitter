@@ -98,6 +98,7 @@ protected:
 	bool readAccessKey();
 	bool initUserInfo();
 	void doSimpleUIMode();
+	void doBotMode();
 	
 	void initSetting();
 	void readSetting();

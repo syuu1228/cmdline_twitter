@@ -35,6 +35,7 @@
 
 #include "main.hpp"
 #include "simple_ui.hpp"
+#include "bot.hpp"
 #include "keys/apikeys.hpp"
 
 #include <sys/stat.h>
@@ -425,6 +426,7 @@ bool mainApp::parse_cmdline(int argc,char *argv[])
 	while(1){
 		int c = getopt_long_only(argc,argv,"",long_options,NULL);
 		
+                printf("%s:%d c=%c\n", __func__, __LINE__, c);
 		if(c == -1)		break;		// -1は解析終わり
 		switch (c) {
 		case 0:
@@ -515,36 +517,29 @@ void mainApp::doSimpleUIMode()
 	ui.Execute(opt,client,setting);
 }
 
+void mainApp::doBotMode()
+{
+	Bot bot;
+	bot.Execute(opt,client,setting);
+}
+
 int mainApp::DoMain(int argc,char *argv[])
 {
-	if(argc == 1){
-		usage(argc, argv);
-		return 0;
-	}
 	tzset();
 	// このアプリのコンシューマキーなどを設定
 	client.setComsumerPair(AP_COMSUMER_KEY,AP_COMSUMER_SECRET);
 
-	// コマンドライン解析
-	if(! parse_cmdline(argc,argv)){
-		return -1;
-	}
-
-	client.serVerbose(opt.getVerbose());
-	if(opt.getAuth()){
-		do_Authentication();
-		// 認証の場合はいったんここで終わり
-		return 0;
-	}
+	opt.setAries("twitosv");
+	opt.setReadTL(true);
+	opt.setStreamAPI(true);
+	client.serVerbose(true);
 	readSetting();
 	
 	// ここから先はユーザのアクセスキーが必要
 	if(! readAccessKey()){
 		return -1;
 	}
-	// TODO: simpleモードしか今はないが、対話モードができてきた
-	//       場合はこの辺で処理をわけます
-	doSimpleUIMode();
+	doBotMode();
 	return 0;
 }
 
