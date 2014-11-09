@@ -517,30 +517,20 @@ void mainApp::doSimpleUIMode()
 
 int mainApp::DoMain(int argc,char *argv[])
 {
-	if(argc == 1){
-		usage(argc, argv);
-		return 0;
-	}
+retry:
 	tzset();
 	// このアプリのコンシューマキーなどを設定
 	client.setComsumerPair(AP_COMSUMER_KEY,AP_COMSUMER_SECRET);
 
-	// コマンドライン解析
-	if(! parse_cmdline(argc,argv)){
-		return -1;
-	}
-
-	client.serVerbose(opt.getVerbose());
-	if(opt.getAuth()){
-		do_Authentication();
-		// 認証の場合はいったんここで終わり
-		return 0;
-	}
+	opt.setAries("osv");
+	opt.setReadTL(true);
+	opt.setStreamAPI(true);
 	readSetting();
 	
 	// ここから先はユーザのアクセスキーが必要
 	if(! readAccessKey()){
-		return -1;
+		do_Authentication();
+		goto retry;
 	}
 	// TODO: simpleモードしか今はないが、対話モードができてきた
 	//       場合はこの辺で処理をわけます
