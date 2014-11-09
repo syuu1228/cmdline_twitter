@@ -308,8 +308,6 @@ public:
 	inline std::string getLastErrorMessage()			{return m_lasterror;}
 	
 	inline void vprint(const std::string &str){
-		if(! isVerbose()) return;
-		std::cout << str << std::endl;
 	}
 };
 
