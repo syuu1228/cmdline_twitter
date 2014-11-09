@@ -15,7 +15,7 @@ DEPS	  = $(HASH_SRCS:%.cpp=%.d) $(HTTP_SRCS:%.cpp=%.d) $(AUTH_SRCS:%.cpp=%.d) $(
 KEYS	  = keys/apikeys.hpp
 INCLUDE_DIRS = ./hashcodes ./http ./oauth ./twitter ./ui ./include .
 
-CFLAGS    = -Wall -O2 $(addprefix -I,$(INCLUDE_DIRS))
+CFLAGS    = -Wall -O2 -fPIC -shared $(addprefix -I,$(INCLUDE_DIRS))
 LDFLAGS   = -lcurl
 
 ifndef CONSUMER_KEY
